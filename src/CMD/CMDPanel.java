@@ -36,7 +36,6 @@ public class CMDPanel extends JPanel{
         mostrarMensajeBienvenida();
     }
 
-    // ==================== INTERFAZ ====================
 
     private void configurarInterfaz(){
         setLayout(new BorderLayout());
@@ -94,15 +93,12 @@ public class CMDPanel extends JPanel{
         add(panelEntrada, BorderLayout.SOUTH);
     }
 
-    // ==================== MENSAJE INICIAL ====================
 
     private void mostrarMensajeBienvenida(){
         areaSalida.append("Microsoft Windows [Versión Simulada 10.0.19045]\n");
         areaSalida.append("(c) Consola de Comandos Simulada. Todos los derechos reservados.\n");
         areaSalida.append("Escriba 'Help' para ver la lista de comandos disponibles.\n\n");
     }
-
-    // ==================== ENTRADA ====================
 
     private void procesarEntrada(String texto){
         if(modoActual == ModoEntrada.WRITING){
@@ -143,8 +139,6 @@ public class CMDPanel extends JPanel{
         actualizarInterfaz();
     }
 
-    // ==================== ESCRITURA ====================
-
     public void activarModoEscritura(FileWriter writer, String nombreArchivo, boolean append){
         escritorActivo = writer;
         nombreArchivoActivo = nombreArchivo;
@@ -153,8 +147,6 @@ public class CMDPanel extends JPanel{
         areaSalida.append("--- Modo " + (append ? "Anexar" : "Escritura") + " iniciado para '" + nombreArchivo + "' ---\n");
         areaSalida.append("Escriba las líneas de texto. Ingrese 'EXIT' para finalizar y guardar.\n\n");
     }
-
-    // ==================== MÉTODOS QUE USA EL CONTROLADOR ====================
 
     public void imprimir(String texto){
         areaSalida.append(texto + "\n");
@@ -186,8 +178,6 @@ public class CMDPanel extends JPanel{
             campoEntrada.requestFocusInWindow();
         });
     }
-
-    // ==================== CERRAR CMD ====================
 
     public void setAccionCerrar(Runnable accionCerrar){
         this.accionCerrar = accionCerrar;

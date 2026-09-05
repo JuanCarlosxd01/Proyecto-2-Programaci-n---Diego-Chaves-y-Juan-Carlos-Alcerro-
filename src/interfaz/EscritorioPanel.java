@@ -93,7 +93,7 @@ public class EscritorioPanel extends JPanel {
     private void crearIconosEjemplo(){
         crearIcono("Equipo", "💻", 0, 0);
         crearIcono("Archivos", "📁", 0, 1);
-        crearIcono("Notas", "📝", 0, 2);
+        crearIcono("Word", "📝", 0, 2);
         crearIcono("Música", "♫", 0, 3);
         crearIcono("CMD", "⌨", 1, 0);
         crearIcono("INSTA+","📷", 1, 1);
@@ -158,8 +158,14 @@ public class EscritorioPanel extends JPanel {
             cmd.setAccionCerrar(() -> {
                 ventana.dispose();
             });
-
             ventana.add(cmd);
+        }
+        else if(nombre.equals("Word")){
+            EditorTextoPanel editor = new EditorTextoPanel();
+            editor.setAccionCerrar(() ->{
+                ventana.dispose();
+            });
+            ventana.add(editor);
         }
         else{
             JPanel contenido = new JPanel(new BorderLayout());
