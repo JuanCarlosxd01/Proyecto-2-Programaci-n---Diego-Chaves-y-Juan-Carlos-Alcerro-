@@ -192,11 +192,7 @@ public class LoginPanel extends JPanel{
     
      private void acciones() {
         btnIngresar.addActionListener(e -> {
-            transicion.show(
-                    contenedor,
-                    "ESCRITORIO"
-            );
-
+            transicion.show(contenedor, "ESCRITORIO");
         });
     }
     
