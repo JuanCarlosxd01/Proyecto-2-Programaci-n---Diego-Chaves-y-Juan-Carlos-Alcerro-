@@ -96,6 +96,7 @@ public class EscritorioPanel extends JPanel {
         crearIcono("Notas", "📝", 0, 2);
         crearIcono("Música", "♫", 0, 3);
         crearIcono("CMD", "⌨", 1, 0);
+        crearIcono("INSTA+","📷", 1, 1);
     }
 
     private void crearIcono(String nombre, String simbolo, int columna, int fila){

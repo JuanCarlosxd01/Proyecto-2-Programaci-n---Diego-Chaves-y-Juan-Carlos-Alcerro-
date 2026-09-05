@@ -2,6 +2,9 @@
 package modelo;
 
 
-public class TipoUsuario {
-
+public enum TipoUsuario {
+    ADMINISTRADOR,
+    ESTANDAR
+    
+    
 }
