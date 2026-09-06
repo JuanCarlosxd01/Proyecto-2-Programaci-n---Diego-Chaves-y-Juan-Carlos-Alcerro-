@@ -19,6 +19,7 @@ public class EscritorioPanel extends JPanel {
     private JButton iconoSeleccionado = null;
     private JButton btnUsuarios;
     private GestorUsuarios gestorUsuarios;
+    private JPanel menuInicio;
 
     private int anchoCelda = 100;
     private int altoCelda = 100;
@@ -29,6 +30,7 @@ public class EscritorioPanel extends JPanel {
         crearEscritorio();
         crearBarraTareas();
         crearIconosEjemplo();
+        crearMenuInicio();
         addComponentListener(new ComponentAdapter(){
             @Override
             public void componentShown(ComponentEvent e){
@@ -58,7 +60,10 @@ public class EscritorioPanel extends JPanel {
         btnWindows.setBackground(new Color(25, 25, 25));
         btnWindows.setFocusPainted(false);
         btnWindows.setBorderPainted(false);
-
+        btnWindows.addActionListener(e -> {
+            mostrarOcultarMenuInicio();
+        });
+        
         izquierda.add(btnWindows);
 
         panelVentanas = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 4));
@@ -371,11 +376,117 @@ public class EscritorioPanel extends JPanel {
         if(btnUsuarios == null){
             return;
         }
+        btnUsuarios.setVisible(Sesion.esAdministrador());
+        escritorio.repaint();
+    }
+    
+    private void crearMenuInicio(){
+        menuInicio = new JPanel(new BorderLayout());
+        menuInicio.setBackground(new Color(35, 35, 35));
+        menuInicio.setBorder(BorderFactory.createLineBorder(new Color(70, 70, 70))); 
+        menuInicio.setBounds(5, escritorio.getHeight() - 400, 300, 400);
+        
+        JPanel aplicaciones = new JPanel();
+        aplicaciones.setLayout(new BoxLayout(aplicaciones, BoxLayout.Y_AXIS));
+        aplicaciones.setBackground(new Color(35, 35, 35));
+        
+        JButton btnExplorador = crearBotonMenu("📁  Explorador");
+        JButton btnWord = crearBotonMenu("📝  Word");
+        JButton btnCMD = crearBotonMenu("⌨  CMD");
+        JButton btnMusica = crearBotonMenu("♫  Música");
+        JButton btnInsta = crearBotonMenu("📷  INSTA+");
+        
+        aplicaciones.add(btnExplorador);
+        aplicaciones.add(btnWord);
+        aplicaciones.add(btnCMD);
+        aplicaciones.add(btnMusica);
+        aplicaciones.add(btnInsta);
+        menuInicio.add(aplicaciones, BorderLayout.CENTER);
+        
+        JPanel inferior = new JPanel(new BorderLayout());
+        inferior.setBackground(new Color(30, 30, 30));
+        JButton btnApagar = crearBotonMenu("⏻  Apagar");
+        inferior.add(btnApagar, BorderLayout.CENTER);
+        menuInicio.add(inferior, BorderLayout.SOUTH);
+        btnApagar.addActionListener(e -> {
+            apagarSistema();
+        });
+        
+         btnExplorador.addActionListener(e -> {
+            abrirVentana("Archivos");
+            ocultarMenuInicio();
+        });
 
-        btnUsuarios.setVisible(
-                Sesion.esAdministrador()
+        btnWord.addActionListener(e -> {
+            abrirVentana("Word");
+            ocultarMenuInicio();
+        });
+
+        btnCMD.addActionListener(e -> {
+            abrirVentana("CMD");
+            ocultarMenuInicio();
+        });
+
+        btnMusica.addActionListener(e -> {
+            abrirVentana("Música");
+            ocultarMenuInicio();
+        });
+
+        btnInsta.addActionListener(e -> {
+            abrirVentana("INSTA+");
+            ocultarMenuInicio();
+        });
+
+        btnApagar.addActionListener(e -> apagarSistema());
+
+
+        // Al principio no se muestra
+        menuInicio.setVisible(false);
+
+        escritorio.add(menuInicio, JLayeredPane.POPUP_LAYER);
+    }
+    
+    private JButton crearBotonMenu(String texto){
+        JButton boton = new JButton(texto);
+        boton.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        boton.setForeground(Color.WHITE);
+        boton.setBackground(new Color(35, 35, 35));
+
+        boton.setHorizontalAlignment(SwingConstants.LEFT);
+        boton.setFocusPainted(false);
+        boton.setBorderPainted(false);
+        boton.setMaximumSize(
+            new Dimension(Integer.MAX_VALUE, 45)
         );
 
-        escritorio.repaint();
+        return boton;
+    }
+    
+    private void mostrarOcultarMenuInicio(){
+        if(menuInicio == null){
+            return;
+        }
+        int x = 5;
+        int y = escritorio.getHeight() - menuInicio.getHeight();
+        
+        menuInicio.setLocation(x, y);
+        menuInicio.setVisible(!menuInicio.isVisible());
+
+        if(menuInicio.isVisible()){
+            escritorio.moveToFront(menuInicio);
+        }
+    }
+    
+    private void ocultarMenuInicio(){
+        if(menuInicio != null){
+            menuInicio.setVisible(false);
+        }
+    }
+    
+    private void apagarSistema(){
+        int opcion = JOptionPane.showConfirmDialog(this, "¿Desea apagar el sistema?", "Apagar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if(opcion == JOptionPane.YES_OPTION){
+            System.exit(0);
+        }
     }
 }
