@@ -3,11 +3,13 @@ package interfaz;
 
 import java.awt.*;
 import javax.swing.*;
+import sistema.*;
 
 public class VentanaPrincipal extends JFrame{
     
     private JPanel contenedor;
     private CardLayout transicion;
+    private GestorUsuarios gestorUsuarios;
     
     public VentanaPrincipal(){
         setTitle("Mini Windows");
@@ -15,6 +17,7 @@ public class VentanaPrincipal extends JFrame{
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         
+        gestorUsuarios = new GestorUsuarios();
         transicion = new CardLayout();
         contenedor = new JPanel(transicion);  
         
@@ -25,18 +28,10 @@ public class VentanaPrincipal extends JFrame{
     }
     
     private void crearPaneles(){
-        PantallaInicioSesion pantalla = new PantallaInicioSesion(contenedor, transicion);
-        EscritorioPanel escritorio = new EscritorioPanel(contenedor, transicion);
-        /*ExploradorPanel explorador = new ExploradorPanel(contenedor, transicion);
-        EditorTextoPanel editor = new EditorTextoPanel(contenedor, transicion);
-        ReproductorPanel reproductor = new ReproductorPanel(contenedor, transicion);
-        VisorImagenPanel visor = new VisorImagenPanel(contenedor, transicion);*/
-        
+        PantallaInicioSesion pantalla = new PantallaInicioSesion(contenedor, transicion, gestorUsuarios);
+        EscritorioPanel escritorio = new EscritorioPanel(contenedor, transicion, gestorUsuarios);
+
         contenedor.add(pantalla, "LOGIN");
         contenedor.add(escritorio, "ESCRITORIO");
-        /*contenedor.add(explorador, "EXPLORADOR");
-        contenedor.add(editor, "EDITOR");
-        contenedor.add(reproductor, "REPRODUCTOR");
-        contenedor.add(visor, "VISOR");*/
     }
 }

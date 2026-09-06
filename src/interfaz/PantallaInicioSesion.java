@@ -3,17 +3,20 @@ package interfaz;
 
 import java.awt.*;
 import javax.swing.*;
+import sistema.*;
 
 public class PantallaInicioSesion extends JPanel{
     private LoginPanel login;
     private PanelBloqueo bloqueo;
     private Image imagenFondo;
+    private GestorUsuarios gestorUsuarios;
     
-    public PantallaInicioSesion(JPanel contenedor, CardLayout transicion){
+    public PantallaInicioSesion(JPanel contenedor, CardLayout transicion, GestorUsuarios gestorUsuarios){
+        this.gestorUsuarios = gestorUsuarios;
         setLayout(null);
         imagenFondo = new ImageIcon(getClass().getResource("/Imagenes/FondoLogin.png")).getImage();
         bloqueo = new PanelBloqueo(this);
-        login = new LoginPanel(contenedor, transicion);
+        login = new LoginPanel(contenedor, transicion, gestorUsuarios);
         
         login.setVisible(false);
         

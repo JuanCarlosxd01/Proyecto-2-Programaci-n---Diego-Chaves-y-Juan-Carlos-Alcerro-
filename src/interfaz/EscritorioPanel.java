@@ -6,6 +6,7 @@ import java.awt.event.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import CMD.*;
+import sistema.*;
 
 public class EscritorioPanel extends JPanel {
 
@@ -16,15 +17,24 @@ public class EscritorioPanel extends JPanel {
     private JLabel lblFecha;
     private JButton btnWindows;
     private JButton iconoSeleccionado = null;
+    private JButton btnUsuarios;
+    private GestorUsuarios gestorUsuarios;
 
     private int anchoCelda = 100;
     private int altoCelda = 100;
 
-    public EscritorioPanel(JPanel contenedor, CardLayout transicion){
+    public EscritorioPanel(JPanel contenedor, CardLayout transicion, GestorUsuarios gestorUsuarios){
+        this.gestorUsuarios = gestorUsuarios;
         setLayout(new BorderLayout());
         crearEscritorio();
         crearBarraTareas();
         crearIconosEjemplo();
+        addComponentListener(new ComponentAdapter(){
+            @Override
+            public void componentShown(ComponentEvent e){
+                actualizarPermisos();
+            }
+        });
     }
 
     private void crearEscritorio(){
@@ -97,9 +107,11 @@ public class EscritorioPanel extends JPanel {
         crearIcono("Música", "♫", 0, 3);
         crearIcono("CMD", "⌨", 1, 0);
         crearIcono("INSTA+","📷", 1, 1);
+        btnUsuarios = crearIcono("Usuarios", "👥", 1, 2);
+        btnUsuarios.setVisible(false);
     }
 
-    private void crearIcono(String nombre, String simbolo, int columna, int fila){
+    private JButton crearIcono(String nombre, String simbolo, int columna, int fila){
         JButton icono = new JButton("<html><center><span style='font-size:30px'>" + simbolo + "</span><br>" + nombre + "</center></html>");
 
         icono.setForeground(Color.WHITE);
@@ -116,6 +128,7 @@ public class EscritorioPanel extends JPanel {
         detectarClicks(icono, nombre);
 
         escritorio.add(icono, JLayeredPane.DEFAULT_LAYER);
+        return icono;
     }
 
     private void detectarClicks(JButton icono, String nombre){
@@ -166,6 +179,22 @@ public class EscritorioPanel extends JPanel {
                 ventana.dispose();
             });
             ventana.add(editor);
+        }
+        else if(nombre.equals("Música")){
+            ReproductorPanel musica = new ReproductorPanel();
+            musica.setAccionCerrar(() ->{
+                ventana.dispose();
+            });
+            ventana.add(musica);
+        }
+        else if(nombre.equals("Usuarios")){
+            if(!Sesion.esAdministrador()){
+                JOptionPane.showMessageDialog(this, "Solo el administrador puede administrar usuarios.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+                ventana.dispose();
+                return;
+            }
+            AdministrarUsuariosPanel usuarios =new AdministrarUsuariosPanel(gestorUsuarios);
+            ventana.add(usuarios);
         }
         else{
             JPanel contenido = new JPanel(new BorderLayout());
@@ -319,8 +348,7 @@ public class EscritorioPanel extends JPanel {
 
         int x = ventana.getX();
         int derecha = x + ventana.getWidth();
-
-        // Mitad izquierda
+        
         if(x <= margen){
             ajustando[0] = true;
             ventana.setBounds(0, 0, ancho / 2, alto);
@@ -329,8 +357,6 @@ public class EscritorioPanel extends JPanel {
                 ajustando[0] = false;
             });
         }
-
-        // Mitad derecha
         else if(derecha >= ancho - margen){
             ajustando[0] = true;
             ventana.setBounds(ancho / 2, 0, ancho / 2, alto);
@@ -339,5 +365,17 @@ public class EscritorioPanel extends JPanel {
                 ajustando[0] = false;
             });
         }
+    }
+    
+    public void actualizarPermisos(){
+        if(btnUsuarios == null){
+            return;
+        }
+
+        btnUsuarios.setVisible(
+                Sesion.esAdministrador()
+        );
+
+        escritorio.repaint();
     }
 }

@@ -4,14 +4,14 @@ package sistema;
 import modelo.*;
 
 public class Sesion {
-    private UsuarioSistema usuarioActual;
+    private static UsuarioSistema usuarioActual;
     
-    public void Sesion(UsuarioSistema usuarioActual){
-        this.usuarioActual = usuarioActual;
+    public static void iniciarSesion(UsuarioSistema usuario){
+        usuarioActual = usuario;
     }
     
-    public void cerrar(){
-        
+    public static void cerrarSesion() {
+        usuarioActual = null;
     }
     
     public UsuarioSistema getUsuarioActual(){
@@ -22,7 +22,7 @@ public class Sesion {
         return usuarioActual != null;
     }
     
-    public boolean esAdministrador(){
+    public static boolean esAdministrador(){
         return usuarioActual != null && usuarioActual.esAdministrador();
     }
 }

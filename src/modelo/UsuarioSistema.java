@@ -16,7 +16,7 @@ public class UsuarioSistema implements Serializable{
         this.activo = true;
     }
     
-    public String getUsuario(){
+    public String getUsername(){
         return usuario;
     }
     

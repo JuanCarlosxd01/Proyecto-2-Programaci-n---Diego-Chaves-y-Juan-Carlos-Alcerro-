@@ -1,56 +1,67 @@
 
 package sistema;
 
+import java.io.File;
 import java.util.ArrayList;
-import modelo.*;
+import modelo.TipoUsuario;
+import modelo.UsuarioSistema;
 
 public class GestorUsuarios {
+
     private ArrayList<UsuarioSistema> usuarios;
-    private GestorArchivos gestorArchivos;
-    
-    public GestorUsuarios(GestorArchivos gestorArchivos){
+
+    public GestorUsuarios() {
         usuarios = new ArrayList<>();
-        this.gestorArchivos = gestorArchivos;
+        crearAdministradorInicial();
     }
-    
-    public UsuarioSistema buscarUsuario(String nombre){
-        for(UsuarioSistema usuario : usuarios){
-            if(usuario.getUsuario().equalsIgnoreCase(nombre)){
+
+    private void crearAdministradorInicial() {
+        UsuarioSistema admin = new UsuarioSistema("admin", "admin", TipoUsuario.ADMINISTRADOR);
+        usuarios.add(admin);
+        crearCarpetasUsuario(admin);
+    }
+
+    public UsuarioSistema iniciarSesion(String username, String contrasena) {
+        for (UsuarioSistema usuario : usuarios) {
+            if (usuario.getUsername().equals(username) && usuario.getContrasena().equals(contrasena)) {
                 return usuario;
             }
         }
         return null;
     }
-    
-    public boolean crearUsuario(String nombre, String contrasena, TipoUsuario tipo){
-        if(buscarUsuario(nombre) != null){
+
+    public boolean crearUsuario(String username, String contrasena) {
+        if (!Sesion.esAdministrador()) {
             return false;
         }
-        
-        UsuarioSistema nuevo = new UsuarioSistema(nombre, contrasena, tipo);
+
+        if (buscarUsuario(username) != null) {
+            return false;
+        }
+        UsuarioSistema nuevo =new UsuarioSistema(username, contrasena, TipoUsuario.ESTANDAR);
         usuarios.add(nuevo);
-        gestorArchivos.crearEstructuraUsuario(nuevo);
+        crearCarpetasUsuario(nuevo);
         return true;
     }
-    
-    public UsuarioSistema autenticar(String nombre, String contrasena){
-        UsuarioSistema usuario = buscarUsuario(nombre);
-        if(usuario == null){
-            return null;
+
+    public UsuarioSistema buscarUsuario(String username) {
+        for (UsuarioSistema usuario : usuarios) {
+            if (usuario.getUsername().equals(username)) {
+                return usuario;
+            }
         }
-        if(!usuario.estaActivo()){
-            return null;
-        }
-        if(!usuario.getContrasena().equals(contrasena)){
-            return null;
-        }
-        return usuario;
+        return null;
     }
-    
-    public ArrayList<UsuarioSistema> getUsuarios(){
+
+    private void crearCarpetasUsuario(UsuarioSistema usuario) {
+        File carpetaUsuario = new File("Z/" + usuario.getUsername());
+        carpetaUsuario.mkdirs();
+        new File(carpetaUsuario, "Mis Documentos").mkdir();
+        new File(carpetaUsuario, "Música").mkdir();
+        new File(carpetaUsuario, "Mis Imágenes").mkdir();
+    }
+
+    public ArrayList<UsuarioSistema> getUsuarios() {
         return usuarios;
-    } 
-        
-    
-    
+    }
 }

@@ -5,10 +5,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import sistema.*;
+import modelo.*;
 
 public class LoginPanel extends JPanel{
     private JPanel contenedor;
     private CardLayout transicion;
+    private GestorUsuarios gestorUsuarios;
     
     private JTextField txtUsuario;
     private JPasswordField txtContrasena;
@@ -16,9 +19,10 @@ public class LoginPanel extends JPanel{
     private JButton btnApagar;
     private ImageIcon iconoApagar = new ImageIcon(getClass().getResource("/Imagenes/botonApagar.png")); 
     
-    public LoginPanel(JPanel contenedor, CardLayout transicion){       
+    public LoginPanel(JPanel contenedor, CardLayout transicion, GestorUsuarios gestorUsuarios){       
         this.contenedor = contenedor;
         this.transicion = transicion;
+        this.gestorUsuarios = gestorUsuarios;
         setOpaque(false);
         setLayout(new GridBagLayout());
 
@@ -192,7 +196,16 @@ public class LoginPanel extends JPanel{
     
      private void acciones() {
         btnIngresar.addActionListener(e -> {
-            transicion.show(contenedor, "ESCRITORIO");
+            String usuario = txtUsuario.getText();
+            String contrasena = new String(txtContrasena.getPassword());
+            UsuarioSistema encontrado = gestorUsuarios.iniciarSesion(usuario, contrasena);
+            if(encontrado != null){
+                Sesion.iniciarSesion(encontrado);
+                transicion.show(contenedor, "ESCRITORIO");
+            }
+            else{
+                JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos.");
+            }
         });
     }
     
