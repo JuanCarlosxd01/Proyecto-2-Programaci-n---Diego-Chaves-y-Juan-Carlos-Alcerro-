@@ -20,11 +20,15 @@ public class EscritorioPanel extends JPanel {
     private JButton btnUsuarios;
     private GestorUsuarios gestorUsuarios;
     private JPanel menuInicio;
+    private JPanel contenedor;
+    private CardLayout transicion;
 
     private int anchoCelda = 100;
     private int altoCelda = 100;
 
     public EscritorioPanel(JPanel contenedor, CardLayout transicion, GestorUsuarios gestorUsuarios){
+        this.contenedor = contenedor;
+        this.transicion = transicion;
         this.gestorUsuarios = gestorUsuarios;
         setLayout(new BorderLayout());
         crearEscritorio();
@@ -403,13 +407,23 @@ public class EscritorioPanel extends JPanel {
         aplicaciones.add(btnInsta);
         menuInicio.add(aplicaciones, BorderLayout.CENTER);
         
-        JPanel inferior = new JPanel(new BorderLayout());
+        JPanel inferior = new JPanel();
+        inferior.setLayout(new BoxLayout(inferior, BoxLayout.Y_AXIS));       
         inferior.setBackground(new Color(30, 30, 30));
+        JButton btnCerrarSesion = crearBotonMenu("🚪  Cerrar sesión");
         JButton btnApagar = crearBotonMenu("⏻  Apagar");
-        inferior.add(btnApagar, BorderLayout.CENTER);
+        inferior.add(btnCerrarSesion);
+        inferior.add(btnApagar);
         menuInicio.add(inferior, BorderLayout.SOUTH);
+        
+        
+        btnCerrarSesion.addActionListener(e -> {
+            mostrarConfirmacionCerrarSesion();
+        });
+
+
         btnApagar.addActionListener(e -> {
-            apagarSistema();
+            mostrarConfirmacionApagar();
         });
         
          btnExplorador.addActionListener(e -> {
@@ -437,10 +451,6 @@ public class EscritorioPanel extends JPanel {
             ocultarMenuInicio();
         });
 
-        btnApagar.addActionListener(e -> apagarSistema());
-
-
-        // Al principio no se muestra
         menuInicio.setVisible(false);
 
         escritorio.add(menuInicio, JLayeredPane.POPUP_LAYER);
@@ -483,10 +493,103 @@ public class EscritorioPanel extends JPanel {
         }
     }
     
-    private void apagarSistema(){
-        int opcion = JOptionPane.showConfirmDialog(this, "¿Desea apagar el sistema?", "Apagar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if(opcion == JOptionPane.YES_OPTION){
+    private void mostrarConfirmacionApagar(){
+        ocultarMenuInicio();
+        JPanel fondo = new JPanel(null);
+        fondo.setBackground(new Color(0, 0, 0, 170));
+        fondo.setBounds(0, 0, escritorio.getWidth(), escritorio.getHeight());
+
+        JPanel ventana = new JPanel();
+        ventana.setLayout(new BorderLayout(10, 20));
+        ventana.setBackground(new Color(35, 35, 35));
+        ventana.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100)));
+
+        int ancho = 400;
+        int alto = 180;
+        int x = (escritorio.getWidth() - ancho) / 2;
+        int y = (escritorio.getHeight() - alto) / 2;
+        ventana.setBounds(x, y, ancho, alto);
+
+        JLabel mensaje = new JLabel("¿Desea apagar el sistema?", SwingConstants.CENTER);
+        mensaje.setForeground(Color.WHITE);
+        mensaje.setFont(new Font("Segoe UI", Font.PLAIN, 19));
+
+        JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        botones.setOpaque(false);
+
+        JButton btnCancelar = new JButton("Cancelar");
+        JButton btnAceptar = new JButton("Apagar");
+
+        botones.add(btnCancelar);
+        botones.add(btnAceptar);
+
+        ventana.add(mensaje, BorderLayout.CENTER);
+        ventana.add(botones, BorderLayout.SOUTH);
+        fondo.add(ventana);
+
+        escritorio.add(fondo, JLayeredPane.DRAG_LAYER);
+        escritorio.moveToFront(fondo);
+        fondo.setVisible(true);
+
+        btnCancelar.addActionListener(e -> {
+            escritorio.remove(fondo);
+            escritorio.repaint();
+        });
+
+        btnAceptar.addActionListener(e -> {
             System.exit(0);
-        }
+        });
+    }
+    
+    private void mostrarConfirmacionCerrarSesion(){
+        ocultarMenuInicio();
+        JPanel fondo = new JPanel(null);
+        fondo.setBackground(new Color(0, 0, 0, 170));
+        fondo.setBounds(0, 0, escritorio.getWidth(), escritorio.getHeight());
+
+        JPanel ventana = new JPanel(new BorderLayout(10, 20));
+        ventana.setBackground(new Color(35, 35, 35));
+        ventana.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100)));
+
+        int ancho = 400;
+        int alto = 180;
+        int x = (escritorio.getWidth() - ancho) / 2;
+        int y = (escritorio.getHeight() - alto) / 2;
+        ventana.setBounds(x, y, ancho, alto);
+
+        JLabel mensaje = new JLabel("¿Desea cerrar la sesión?", SwingConstants.CENTER);
+        mensaje.setForeground(Color.WHITE);
+        mensaje.setFont(new Font("Segoe UI", Font.PLAIN, 19));
+
+        JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        botones.setOpaque(false);
+
+        JButton btnCancelar = new JButton("Cancelar");
+        JButton btnAceptar = new JButton("Cerrar sesión");
+
+        botones.add(btnCancelar);
+        botones.add(btnAceptar);
+
+        ventana.add(mensaje, BorderLayout.CENTER);
+        ventana.add(botones, BorderLayout.SOUTH);
+        fondo.add(ventana);
+
+        escritorio.add(fondo, JLayeredPane.DRAG_LAYER);
+        escritorio.moveToFront(fondo);
+
+        btnCancelar.addActionListener(e -> {
+            escritorio.remove(fondo);
+            escritorio.repaint();
+        });
+
+        btnAceptar.addActionListener(e -> {
+            escritorio.remove(fondo);
+            cerrarSesion();
+        });
+    }
+    
+    private void cerrarSesion(){
+        Sesion.cerrarSesion();
+        transicion.show(contenedor, "LOGIN");
     }
 }

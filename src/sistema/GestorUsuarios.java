@@ -5,20 +5,27 @@ import java.io.File;
 import java.util.ArrayList;
 import modelo.TipoUsuario;
 import modelo.UsuarioSistema;
+import persistencia.*;
 
 public class GestorUsuarios {
 
     private ArrayList<UsuarioSistema> usuarios;
+    private GestorUsuariosBinario gestorBinario;
 
     public GestorUsuarios() {
-        usuarios = new ArrayList<>();
-        crearAdministradorInicial();
+        gestorBinario = new GestorUsuariosBinario();
+        usuarios = gestorBinario.cargarUsuarios();
+        
+        if(usuarios.isEmpty()){
+            crearAdministradorInicial();
+        }
     }
 
     private void crearAdministradorInicial() {
         UsuarioSistema admin = new UsuarioSistema("admin", "admin", TipoUsuario.ADMINISTRADOR);
         usuarios.add(admin);
         crearCarpetasUsuario(admin);
+        gestorBinario.guardarUsuarios(usuarios);
     }
 
     public UsuarioSistema iniciarSesion(String username, String contrasena) {
@@ -31,16 +38,14 @@ public class GestorUsuarios {
     }
 
     public boolean crearUsuario(String username, String contrasena) {
-        if (!Sesion.esAdministrador()) {
+        if(buscarUsuario(username) != null){
             return false;
         }
-
-        if (buscarUsuario(username) != null) {
-            return false;
-        }
-        UsuarioSistema nuevo =new UsuarioSistema(username, contrasena, TipoUsuario.ESTANDAR);
+        UsuarioSistema nuevo = new UsuarioSistema(username, contrasena, TipoUsuario.ESTANDAR);
         usuarios.add(nuevo);
         crearCarpetasUsuario(nuevo);
+        gestorBinario.guardarUsuarios(usuarios);
+        
         return true;
     }
 
@@ -64,4 +69,4 @@ public class GestorUsuarios {
     public ArrayList<UsuarioSistema> getUsuarios() {
         return usuarios;
     }
-}
+} 
