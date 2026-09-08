@@ -1,6 +1,7 @@
 
 package CMD;
 
+import interfaz.CMDPanel;
 import java.io.*;
 import java.util.Date;
 import java.text.SimpleDateFormat;

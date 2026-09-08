@@ -5,8 +5,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import CMD.*;
 import sistema.*;
+import insta.interfaz.*;
 
 public class EscritorioPanel extends JPanel {
 
@@ -204,6 +204,13 @@ public class EscritorioPanel extends JPanel {
             }
             AdministrarUsuariosPanel usuarios =new AdministrarUsuariosPanel(gestorUsuarios);
             ventana.add(usuarios);
+        }
+        else if(nombre.equals("INSTA+")){
+            InstaPanel insta = new InstaPanel();
+            insta.setAccionCerrar (() ->{
+                ventana.dispose();
+            });
+            ventana.add(insta);
         }
         else{
             JPanel contenido = new JPanel(new BorderLayout());

@@ -101,9 +101,7 @@ public class ReproductorPanel extends JPanel{
     private void crearListaCanciones() {
 
         JPanel panel = new JPanel(new BorderLayout());
-
         JLabel titulo = new JLabel("Lista de canciones");
-
         titulo.setFont(
                 new Font("Arial", Font.BOLD, 18)
         );

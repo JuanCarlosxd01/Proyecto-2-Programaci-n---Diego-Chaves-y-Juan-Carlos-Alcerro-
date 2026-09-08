@@ -1,6 +1,8 @@
 
-package CMD;
+package interfaz;
 
+import CMD.GestorArchivos;
+import CMD.controladorComandos;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
