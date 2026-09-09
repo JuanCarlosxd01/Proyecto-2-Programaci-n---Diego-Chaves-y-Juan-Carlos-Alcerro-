@@ -14,7 +14,7 @@ public class Sesion {
         usuarioActual = null;
     }
     
-    public UsuarioSistema getUsuarioActual(){
+    public static UsuarioSistema getUsuarioActual(){
         return usuarioActual;
     }
     
