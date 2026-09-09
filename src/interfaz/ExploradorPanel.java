@@ -31,6 +31,10 @@ public class ExploradorPanel extends JPanel {
         } else {
             carpetaRaiz = new File("Z");
         }
+
+        if (!carpetaRaiz.exists()) {
+            carpetaRaiz.mkdirs();
+        }
     }
 
     private void crearBarraHerramientas() {
@@ -145,22 +149,23 @@ public class ExploradorPanel extends JPanel {
 
     private void crearCarpeta() {
         File seleccionado = obtenerSeleccionado();
-
         if (seleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione una carpeta.");
-            return;
+            seleccionado = carpetaRaiz;
         }
 
         if (seleccionado.isFile()) {
             seleccionado = seleccionado.getParentFile();
         }
 
-        String nombre = JOptionPane.showInputDialog(this, "Nombre de la carpeta:");
+        if (!seleccionado.exists()) {
+            seleccionado.mkdirs();
+        }
 
+        String nombre = JOptionPane.showInputDialog(this, "Nombre de la carpeta:");
         if (nombre == null || nombre.trim().isEmpty()) {
             return;
         }
-
+        nombre = nombre.trim();
         File nuevaCarpeta = new File(seleccionado, nombre);
 
         if (nuevaCarpeta.exists()) {
@@ -168,8 +173,10 @@ public class ExploradorPanel extends JPanel {
             return;
         }
 
-        if (!nuevaCarpeta.mkdir()) {
-            JOptionPane.showMessageDialog(this, "No se pudo crear la carpeta.");
+        if (nuevaCarpeta.mkdirs()) {
+            JOptionPane.showMessageDialog(this, "Carpeta creada correctamente.");
+        } else {
+            JOptionPane.showMessageDialog(this, "No se pudo crear la carpeta.\nRuta: " + nuevaCarpeta.getAbsolutePath());
         }
 
         cargarArbol();
@@ -177,14 +184,16 @@ public class ExploradorPanel extends JPanel {
 
     private void crearArchivo() {
         File seleccionado = obtenerSeleccionado();
-
         if (seleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione una carpeta.");
-            return;
+            seleccionado = carpetaRaiz;
         }
 
         if (seleccionado.isFile()) {
             seleccionado = seleccionado.getParentFile();
+        }
+
+        if (!seleccionado.exists()) {
+            seleccionado.mkdirs();
         }
 
         String nombre = JOptionPane.showInputDialog(this, "Nombre del archivo:");
@@ -192,7 +201,7 @@ public class ExploradorPanel extends JPanel {
         if (nombre == null || nombre.trim().isEmpty()) {
             return;
         }
-
+        nombre = nombre.trim();
         File nuevoArchivo = new File(seleccionado, nombre);
 
         if (nuevoArchivo.exists()) {
@@ -201,9 +210,15 @@ public class ExploradorPanel extends JPanel {
         }
 
         try {
-            nuevoArchivo.createNewFile();
+            if (nuevoArchivo.createNewFile()) {
+                JOptionPane.showMessageDialog(this, "Archivo creado correctamente.");
+            } else {
+                JOptionPane.showMessageDialog(this, "No se pudo crear el archivo.");
+            }
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error al crear el archivo.");
+            JOptionPane.showMessageDialog(this,
+                    "Error al crear el archivo:\n" + e.getMessage());
+            e.printStackTrace();
         }
 
         cargarArbol();
@@ -336,8 +351,8 @@ public class ExploradorPanel extends JPanel {
             return;
         }
 
-        File imagenes = new File(seleccionado, "Imágenes");
-        File documentos = new File(seleccionado, "Documentos");
+        File imagenes = new File(seleccionado, "Mis Imágenes");
+        File documentos = new File(seleccionado, "Mis Documentos");
         File musica = new File(seleccionado, "Música");
 
         File[] archivos = seleccionado.listFiles();
