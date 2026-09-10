@@ -9,24 +9,22 @@ public class HiloReproductor extends Thread {
 
     private ReproductorMusica reproductor;
     private JSlider progreso;
-    private boolean activo;
+    private volatile boolean activo;
+    private Runnable accionCancionTerminada;
+    private boolean finalProcesado;
 
-    public HiloReproductor(
-            ReproductorMusica reproductor,
-            JSlider progreso) {
-
+    public HiloReproductor(ReproductorMusica reproductor, JSlider progreso) {
         this.reproductor = reproductor;
         this.progreso = progreso;
         this.activo = true;
+        this.finalProcesado = false;
     }
 
     @Override
     public void run() {
-
         while (activo) {
             try {
                 long actual = reproductor.getPosicionActual();
-
                 long duracion = reproductor.getDuracion();
 
                 if (duracion > 0) {
@@ -37,12 +35,30 @@ public class HiloReproductor extends Thread {
                     });
                 }
 
-                Thread.sleep(500);
+                if (reproductor.terminoCancion()) {
+                    if (!finalProcesado && accionCancionTerminada != null) {
+                        finalProcesado = true;
+
+                        SwingUtilities.invokeLater(() -> {
+                            accionCancionTerminada.run();
+                            finalProcesado = false;
+                        });
+                    }
+                } else {
+                    finalProcesado = false;
+                }
+
+                Thread.sleep(300);
 
             } catch (InterruptedException e) {
                 activo = false;
+                Thread.currentThread().interrupt();
             }
         }
+    }
+
+    public void setAccionCancionTerminada(Runnable accion) {
+        this.accionCancionTerminada = accion;
     }
 
     public void detenerHilo() {

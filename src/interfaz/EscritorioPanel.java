@@ -3,6 +3,7 @@ package interfaz;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import javax.swing.event.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import sistema.*;
@@ -197,6 +198,13 @@ public class EscritorioPanel extends JPanel {
                 ventana.dispose();
             });
             ventana.add(musica);
+            
+            ventana.addInternalFrameListener(new InternalFrameAdapter() {
+                @Override
+                public void internalFrameClosing(InternalFrameEvent e){
+                    musica.cerrarReproductor();
+                }
+            });
         }
         else if(nombre.equals("Usuarios")){
             if(!Sesion.esAdministrador()){
