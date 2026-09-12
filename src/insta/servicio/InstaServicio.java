@@ -176,37 +176,57 @@ public class InstaServicio implements AutoCloseable {
         repo.guardar(lote);
     }
 
-    static void validarDatos(
-            String nombre,
-            char genero,
-            int edad,
-            String password
-    ) {
-        if (nombre == null
-                || nombre.isBlank()
-                || nombre.length() > 100) {
-            throw new IllegalArgumentException(
-                    "El nombre debe tener entre 1 y 100 caracteres."
-            );
+    static void validarDatos(String nombre, char genero, int edad, String password) {
+        if (nombre == null || nombre.isBlank() || nombre.length() > 100) {
+            throw new IllegalArgumentException("El nombre debe tener entre 1 y 100 caracteres.");
         }
 
         if (genero != 'M' && genero != 'F') {
-            throw new IllegalArgumentException(
-                    "El género debe ser M o F."
-            );
+            throw new IllegalArgumentException("El género debe ser M o F.");
         }
 
         if (edad < 1 || edad > 120) {
             throw new IllegalArgumentException("Edad inválida.");
         }
 
-        if (password != null
-                && (password.isBlank()
-                || password.length() < 4
-                || password.length() > 128)) {
-            throw new IllegalArgumentException(
-                    "La contraseña debe tener de 4 a 128 caracteres."
-            );
+        if (password != null) {
+            validarPassword(password);
+        }
+    }
+    
+    private static void validarPassword(String password) {
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("La contraseña no puede estar vacía.");
+        }
+
+        if (password.length() < 8 || password.length() > 128) {
+            throw new IllegalArgumentException("La contraseña debe tener entre 8 y 128 caracteres.");
+        }
+
+        boolean tieneMayuscula = false;
+        boolean tieneNumero = false;
+        boolean tieneSimbolo = false;
+
+        for (char caracter : password.toCharArray()) {
+            if (Character.isUpperCase(caracter)) {
+                tieneMayuscula = true;
+            } else if (Character.isDigit(caracter)) {
+                tieneNumero = true;
+            } else if (!Character.isLetterOrDigit(caracter)) {
+                tieneSimbolo = true;
+            }
+        }
+
+        if (!tieneMayuscula) {
+            throw new IllegalArgumentException("La contraseña debe contener al menos una letra mayúscula.");
+        }
+
+        if (!tieneNumero) {
+            throw new IllegalArgumentException("La contraseña debe contener al menos un número.");
+        }
+
+        if (!tieneSimbolo) {
+            throw new IllegalArgumentException("La contraseña debe contener al menos un símbolo.");
         }
     }
 
@@ -451,8 +471,7 @@ public class InstaServicio implements AutoCloseable {
                 String nombre = base;
                 int numero = 1;
 
-                while (buscarUsuario(nombre) != null
-                        || repo.existe(nombre)) {
+                while (buscarUsuario(nombre) != null || repo.existe(nombre)) {
                     nombre = base + numero++;
                 }
 
@@ -465,8 +484,7 @@ public class InstaServicio implements AutoCloseable {
             ));
         }
 
-        ListaEnlazada<String> nombres =
-                repo.leer("semilla.ins", String.class);
+        ListaEnlazada<String> nombres = repo.leer("semilla.ins", String.class);
 
         String[] temas = {
             "Noticias del campus #noticias",
@@ -482,13 +500,12 @@ public class InstaServicio implements AutoCloseable {
                         "Cuenta de ejemplo " + (indice + 1),
                         'M',
                         id,
-                        "Demo1234",
+                        "Demo1234!",
                         20
                 );
             }
 
-            ListaEnlazada<Publicacion> lista =
-                    publicaciones.cargar(id);
+            ListaEnlazada<Publicacion> lista = publicaciones.cargar(id);
 
             if (lista.isEmpty()) {
                 lista.agregar(Publicacion.crearTexto(
@@ -498,8 +515,7 @@ public class InstaServicio implements AutoCloseable {
 
                 lista.agregar(Publicacion.crearTexto(
                         id,
-                        "Comparte tu mirada. "
-                                + temas[indice % temas.length]
+                        "Comparte tu mirada. " + temas[indice % temas.length]
                 ));
 
                 publicaciones.guardar(id, lista);

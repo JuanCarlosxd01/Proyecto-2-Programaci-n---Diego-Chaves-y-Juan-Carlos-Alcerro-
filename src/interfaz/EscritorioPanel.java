@@ -216,10 +216,12 @@ public class EscritorioPanel extends JPanel {
             ventana.add(usuarios);
         }
         else if(nombre.equals("INSTA+")){
-            InstaPanel insta = new InstaPanel();
-            insta.setAccionCerrar (() ->{
+            InstaPrincipalPanel insta = new InstaPrincipalPanel();
+
+            insta.setAccionCerrar(() -> {
                 ventana.dispose();
             });
+
             ventana.add(insta);
         }
         else if(nombre.equals("Archivos")){
