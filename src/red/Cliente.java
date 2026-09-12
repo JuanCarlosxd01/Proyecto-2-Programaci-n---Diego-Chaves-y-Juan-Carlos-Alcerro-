@@ -1,88 +1,163 @@
 
 package red;
 
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputFilter;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-
-import java.time.LocalDateTime;
-import java.util.Objects;
-
+import java.io.*;
+import java.net.*;
+import static red.Solicitud.Operacion.*;
 
 public class Cliente implements AutoCloseable {
-
-    private static final int TIEMPO_CONEXION_MS = 5_000;
-    private static final int TIEMPO_RESPUESTA_MS = 30_000;
-
-    private static final long MAX_BYTES_RESPUESTA =
-            256 * 1024;
 
     private final String host;
     private final int puerto;
 
-    private String tokenSesion;
-    private Respuesta.DatosUsuario usuarioActual;
+    private volatile String token = "";
+    private volatile Respuesta.DatosUsuario usuario;
+    private volatile long versionSesion;
 
     private boolean cerrado;
 
     public Cliente() {
-        this(
-                "127.0.0.1",
-                Servidor.PUERTO_PREDETERMINADO
-        );
+        this("127.0.0.1", Servidor.PUERTO_PREDETERMINADO);
     }
 
     public Cliente(String host, int puerto) {
-        Objects.requireNonNull(
-                host,
-                "La dirección del servidor no puede ser null."
-        );
-
-        if (host.isBlank()) {
+        if (host == null
+                || host.isBlank()
+                || puerto < 1
+                || puerto > 65535) {
             throw new IllegalArgumentException(
-                    "Debes indicar la dirección del servidor."
+                    "Servidor inválido."
             );
         }
 
-        if (puerto < 1 || puerto > 65535) {
-            throw new IllegalArgumentException(
-                    "El puerto debe estar entre 1 y 65535."
-            );
-        }
-
-        this.host = host.strip();
+        this.host = host;
         this.puerto = puerto;
+    }
 
-        this.tokenSesion = "";
-        this.usuarioActual = null;
-        this.cerrado = false;
+    private synchronized Respuesta enviar(Solicitud solicitud)
+            throws IOException {
+
+        if (cerrado) {
+            throw new IOException("Cliente cerrado.");
+        }
+
+        if (solicitud.getArchivo() != null
+                && solicitud.getArchivo().length > 4 * 1024 * 1024) {
+            throw new IOException("La imagen supera 4 MB.");
+        }
+
+        try (Socket socket = new Socket()) {
+            socket.connect(
+                    new InetSocketAddress(host, puerto),
+                    5000
+            );
+
+            socket.setSoTimeout(30000);
+
+            try (ObjectOutputStream salida =
+                         new ObjectOutputStream(socket.getOutputStream())) {
+
+                salida.flush();
+
+                try (ObjectInputStream entrada =
+                             FiltroRed.entrada(socket.getInputStream())) {
+
+                    salida.writeObject(solicitud);
+                    salida.flush();
+
+                    Object objeto = entrada.readObject();
+
+                    if (!(objeto instanceof Respuesta respuesta)
+                            || respuesta.getCodigo() == null
+                            || respuesta.getMensaje() == null) {
+                        throw new IOException("Respuesta inválida.");
+                    }
+
+                    if (respuesta.getCodigo()
+                            == Respuesta.Codigo.SESION_INVALIDA) {
+                        token = "";
+                        usuario = null;
+                        versionSesion++;
+                    }
+
+                    if (respuesta.esExitosa()
+                            && respuesta.tieneUsuario()
+                            && usuario != null
+                            && respuesta.getUsuario().getUsername()
+                                    .equals(usuario.getUsername())) {
+                        usuario = respuesta.getUsuario();
+                    }
+
+                    return respuesta;
+                }
+            }
+
+        } catch (ClassNotFoundException e) {
+            throw new IOException(
+                    "Versiones incompatibles de cliente y servidor.",
+                    e
+            );
+        }
+    }
+
+    private synchronized Respuesta accion(
+            Solicitud.Operacion operacion,
+            byte[] bytes,
+            String... argumentos
+    ) throws IOException {
+
+        if (!tieneSesion()) {
+            return Respuesta.error(
+                    Respuesta.Codigo.SESION_INVALIDA,
+                    "Inicia sesión."
+            );
+        }
+
+        return enviar(new Solicitud(
+                operacion,
+                token,
+                bytes,
+                argumentos
+        ));
     }
 
     public synchronized Respuesta registrarUsuario(
-            String nombreCompleto,
+            String nombre,
             char genero,
             String username,
             String password,
             int edad
     ) throws IOException {
 
-        Solicitud solicitud = Solicitud.registrarUsuario(
-                nombreCompleto,
+        return registrarUsuario(
+                nombre,
                 genero,
                 username,
                 password,
-                edad
+                edad,
+                null
         );
+    }
 
-        return enviar(solicitud);
+    public synchronized Respuesta registrarUsuario(
+            String nombre,
+            char genero,
+            String username,
+            String password,
+            int edad,
+            byte[] foto
+    ) throws IOException {
+
+        return enviar(new Solicitud(
+                REGISTRAR_USUARIO,
+                "",
+                foto,
+                nombre,
+                String.valueOf(genero),
+                username,
+                password,
+                String.valueOf(edad)
+        ));
     }
 
     public synchronized Respuesta iniciarSesion(
@@ -90,27 +165,26 @@ public class Cliente implements AutoCloseable {
             String password
     ) throws IOException {
 
-        comprobarAbierto();
-
         if (tieneSesion()) {
             throw new IllegalStateException(
-                    "Debes cerrar la sesión actual "
-                    + "antes de iniciar otra."
+                    "Cierra primero la sesión actual."
             );
         }
 
-        Solicitud solicitud = Solicitud.iniciarSesion(
-                username,
-                password
+        Respuesta respuesta = enviar(
+                Solicitud.iniciarSesion(username, password)
         );
 
-        Respuesta respuesta = enviar(solicitud);
-
         if (respuesta.esExitosa()) {
-            validarRespuestaLogin(respuesta);
+            if (!respuesta.tieneUsuario()
+                    || respuesta.getTokenSesion() == null
+                    || respuesta.getTokenSesion().isBlank()) {
+                throw new IOException("Login incompleto.");
+            }
 
-            this.tokenSesion = respuesta.getTokenSesion();
-            this.usuarioActual = respuesta.getUsuario();
+            token = respuesta.getTokenSesion();
+            usuario = respuesta.getUsuario();
+            versionSesion++;
         }
 
         return respuesta;
@@ -119,170 +193,184 @@ public class Cliente implements AutoCloseable {
     public synchronized Respuesta cerrarSesion()
             throws IOException {
 
-        comprobarAbierto();
-
         if (!tieneSesion()) {
-            limpiarSesion();
-
-            return Respuesta.exito(
-                    "No hay una sesión abierta."
-            );
+            return Respuesta.exito("No hay sesión.");
         }
 
-        Solicitud solicitud =
-                Solicitud.cerrarSesion(tokenSesion);
-
-        Respuesta respuesta = enviar(solicitud);
+        Respuesta respuesta = enviar(
+                Solicitud.cerrarSesion(token)
+        );
 
         if (respuesta.esExitosa()
                 || respuesta.getCodigo()
                 == Respuesta.Codigo.SESION_INVALIDA) {
-
-            limpiarSesion();
+            token = "";
+            usuario = null;
+            versionSesion++;
         }
 
         return respuesta;
     }
 
-    public synchronized boolean tieneSesion() {
-        return !tokenSesion.isEmpty();
+    public boolean tieneSesion() {
+        return !token.isEmpty();
     }
 
-    public synchronized Respuesta.DatosUsuario getUsuarioActual() {
-        return usuarioActual;
+    public long getVersionSesion() {
+        return versionSesion;
     }
 
-   
-    private Respuesta enviar(Solicitud solicitud)
-            throws IOException {
-
-        comprobarAbierto();
-
-        try (Socket socket = new Socket()) {
-            socket.connect(
-                    new InetSocketAddress(host, puerto),
-                    TIEMPO_CONEXION_MS
-            );
-
-            socket.setSoTimeout(TIEMPO_RESPUESTA_MS);
-
-            try (
-                    ObjectOutputStream salida =
-                            new ObjectOutputStream(
-                                    socket.getOutputStream()
-                            )
-            ) {
-                /*
-                 * El servidor también crea primero su salida.
-                 * Ambos envían la cabecera antes de abrir
-                 * el ObjectInputStream.
-                 */
-                salida.flush();
-
-                InputStream entradaLimitada =
-                        new EntradaLimitada(
-                                socket.getInputStream(),
-                                MAX_BYTES_RESPUESTA
-                        );
-
-                ObjectInputStream entrada =
-                        new ObjectInputStream(entradaLimitada);
-
-                entrada.setObjectInputFilter(
-                        Cliente::filtrarRespuesta
-                );
-
-                salida.writeObject(solicitud);
-                salida.flush();
-
-                Object recibido = entrada.readObject();
-
-                if (!(recibido instanceof Respuesta)) {
-                    throw new IOException(
-                            "El servidor no devolvió "
-                            + "una respuesta válida de INSTA+."
-                    );
-                }
-
-                Respuesta respuesta = (Respuesta) recibido;
-
-                if (respuesta.getCodigo() == null
-                        || respuesta.getMensaje() == null) {
-
-                    throw new IOException(
-                            "La respuesta del servidor está incompleta."
-                    );
-                }
-
-                return respuesta;
-            }
-
-        } catch (ConnectException e) {
-            throw new IOException(
-                    "No se pudo conectar con INSTA+. "
-                    + "Comprueba que el servidor esté iniciado "
-                    + "en " + host + ":" + puerto + ".",
-                    e
-            );
-
-        } catch (SocketTimeoutException e) {
-            throw new IOException(
-                    "Se agotó el tiempo de espera "
-                    + "para conectar o recibir la respuesta.",
-                    e
-            );
-
-        } catch (ClassNotFoundException e) {
-            throw new IOException(
-                    "El cliente no reconoce una clase "
-                    + "enviada por el servidor.",
-                    e
-            );
-        }
+    public Respuesta.DatosUsuario getUsuarioActual() {
+        return usuario;
     }
 
-    private void validarRespuestaLogin(
-            Respuesta respuesta
+    public Respuesta publicarTexto(String texto) throws IOException {
+        return accion(PUBLICAR_TEXTO, null, texto);
+    }
+
+    public Respuesta publicarImagen(
+            byte[] imagen,
+            String texto,
+            String carpeta
     ) throws IOException {
-
-        if (!respuesta.tieneUsuario()) {
-            throw new IOException(
-                    "El servidor aceptó el login, "
-                    + "pero no devolvió los datos del usuario."
-            );
-        }
-
-        String token = respuesta.getTokenSesion();
-
-        if (token == null || token.isBlank()) {
-            throw new IOException(
-                    "El servidor no devolvió un token de sesión."
-            );
-        }
-
-        String username =
-                respuesta.getUsuario().getUsername();
-
-        if (username == null || username.isBlank()) {
-            throw new IOException(
-                    "Los datos del usuario están incompletos."
-            );
-        }
+        return accion(PUBLICAR_IMAGEN, imagen, texto, carpeta);
     }
 
-    private void comprobarAbierto() {
-        if (cerrado) {
-            throw new IllegalStateException(
-                    "Este cliente ya fue cerrado."
-            );
-        }
+    public Respuesta publicarSticker(String texto, String id)
+            throws IOException {
+        return accion(PUBLICAR_STICKER, null, texto, id);
     }
 
-    private void limpiarSesion() {
-        tokenSesion = "";
-        usuarioActual = null;
+    public Respuesta publicaciones(String usuario, int desde)
+            throws IOException {
+        return accion(PUBLICACIONES, null, usuario, "" + desde);
     }
 
+    public Respuesta timeline(int desde) throws IOException {
+        return accion(TIMELINE, null, "" + desde);
+    }
+
+    public Respuesta seguir(String usuario) throws IOException {
+        return accion(SEGUIR, null, usuario);
+    }
+
+    public Respuesta dejarDeSeguir(String usuario)
+            throws IOException {
+        return accion(DEJAR_SEGUIR, null, usuario);
+    }
+
+    public Respuesta seguidores(String usuario, int desde)
+            throws IOException {
+        return accion(SEGUIDORES, null, usuario, "" + desde);
+    }
+
+    public Respuesta seguidos(String usuario, int desde)
+            throws IOException {
+        return accion(SEGUIDOS, null, usuario, "" + desde);
+    }
+
+    public Respuesta perfil(String usuario) throws IOException {
+        return accion(PERFIL, null, usuario);
+    }
+
+    public Respuesta editarPerfil(
+            String nombre,
+            char genero,
+            int edad,
+            String actual,
+            String nueva
+    ) throws IOException {
+        return accion(
+                EDITAR_PERFIL,
+                null,
+                nombre,
+                "" + genero,
+                "" + edad,
+                actual,
+                nueva
+        );
+    }
+
+    public Respuesta cambiarFoto(byte[] foto) throws IOException {
+        return accion(FOTO_PERFIL, foto);
+    }
+
+    public Respuesta desactivarCuenta() throws IOException {
+        return accion(DESACTIVAR, null);
+    }
+
+    public Respuesta reactivarCuenta() throws IOException {
+        return accion(REACTIVAR, null);
+    }
+
+    public Respuesta buscarPersonas(String texto, int desde)
+            throws IOException {
+        return accion(BUSCAR_PERSONAS, null, texto, "" + desde);
+    }
+
+    public Respuesta buscarHashtag(String texto, int desde)
+            throws IOException {
+        return accion(BUSCAR_HASHTAG, null, texto, "" + desde);
+    }
+
+    public Respuesta menciones(int desde) throws IOException {
+        return accion(MENCIONES, null, "" + desde);
+    }
+
+    public Respuesta enviarMensaje(String usuario, String texto)
+            throws IOException {
+        return accion(ENVIAR_MENSAJE, null, usuario, texto);
+    }
+
+    public Respuesta enviarSticker(String usuario, String id)
+            throws IOException {
+        return accion(ENVIAR_STICKER, null, usuario, id);
+    }
+
+    public Respuesta conversacion(String usuario, int desde)
+            throws IOException {
+        return accion(CONVERSACION, null, usuario, "" + desde);
+    }
+
+    public Respuesta marcarLeidos(String usuario)
+            throws IOException {
+        return accion(LEER_CONVERSACION, null, usuario);
+    }
+
+    public Respuesta eliminarConversacion(String usuario)
+            throws IOException {
+        return accion(ELIMINAR_CONVERSACION, null, usuario);
+    }
+
+    public Respuesta noLeidos(int desde) throws IOException {
+        return accion(NO_LEIDOS, null, "" + desde);
+    }
+
+    public Respuesta stickers(int desde) throws IOException {
+        return accion(STICKERS, null, "" + desde);
+    }
+
+    public Respuesta importarSticker(
+            String nombre,
+            String archivo,
+            byte[] bytes
+    ) throws IOException {
+        return accion(IMPORTAR_STICKER, bytes, nombre, archivo);
+    }
+
+    public Respuesta crearCarpeta(String nombre)
+            throws IOException {
+        return accion(CREAR_CARPETA, null, nombre);
+    }
+
+    public Respuesta carpetas(int desde) throws IOException {
+        return accion(CARPETAS, null, "" + desde);
+    }
+
+    public Respuesta descargarImagen(String referencia)
+            throws IOException {
+        return accion(ARCHIVO, null, referencia);
+    }
 
     @Override
     public synchronized void close() throws IOException {
@@ -291,128 +379,13 @@ public class Cliente implements AutoCloseable {
         }
 
         try {
-            if (tieneSesion()) {
-                cerrarSesion();
-            }
+            cerrarSesion();
 
         } finally {
-            limpiarSesion();
             cerrado = true;
+            token = "";
+            usuario = null;
+            versionSesion++;
         }
     }
-
-    private static ObjectInputFilter.Status filtrarRespuesta(
-            ObjectInputFilter.FilterInfo informacion
-    ) {
-        if (informacion.depth() > 16
-                || informacion.references() > 200
-                || informacion.streamBytes() > MAX_BYTES_RESPUESTA) {
-
-            return ObjectInputFilter.Status.REJECTED;
-        }
-
-        Class<?> clase = informacion.serialClass();
-
-        if (clase == null) {
-            return ObjectInputFilter.Status.UNDECIDED;
-        }
-
-        
-        boolean permitida =
-                clase == Respuesta.class
-                || clase == Respuesta.Codigo.class
-                || clase == Respuesta.DatosUsuario.class
-                || clase == String.class
-                || clase == Enum.class
-                || clase == LocalDateTime.class
-                || clase.getName().equals("java.time.Ser")
-                || clase.isPrimitive();
-
-        return permitida
-                ? ObjectInputFilter.Status.ALLOWED
-                : ObjectInputFilter.Status.REJECTED;
-    }
-
-    private static final class EntradaLimitada
-            extends FilterInputStream {
-
-        private long restantes;
-
-        private EntradaLimitada(
-                InputStream entrada,
-                long limite
-        ) {
-            super(entrada);
-            this.restantes = limite;
-        }
-
-        @Override
-        public int read() throws IOException {
-            comprobarLimite();
-
-            int valor = in.read();
-
-            if (valor != -1) {
-                restantes--;
-            }
-
-            return valor;
-        }
-
-        @Override
-        public int read(
-                byte[] buffer,
-                int offset,
-                int longitud
-        ) throws IOException {
-
-            if (longitud == 0) {
-                return 0;
-            }
-
-            comprobarLimite();
-
-            int permitido = (int) Math.min(
-                    longitud,
-                    restantes
-            );
-
-            int leidos = in.read(
-                    buffer,
-                    offset,
-                    permitido
-            );
-
-            if (leidos > 0) {
-                restantes -= leidos;
-            }
-
-            return leidos;
-        }
-
-        @Override
-        public long skip(long cantidad) throws IOException {
-            if (cantidad <= 0) {
-                return 0;
-            }
-
-            comprobarLimite();
-
-            long omitidos = in.skip(
-                    Math.min(cantidad, restantes)
-            );
-
-            restantes -= omitidos;
-
-            return omitidos;
-        }
-
-        private void comprobarLimite() throws IOException {
-            if (restantes <= 0) {
-                throw new IOException(
-                        "La respuesta supera el tamaño permitido."
-                );
-            }
-        }
-    }
-} 
+}

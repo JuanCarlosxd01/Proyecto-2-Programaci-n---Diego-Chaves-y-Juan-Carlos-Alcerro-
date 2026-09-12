@@ -1,376 +1,192 @@
 
 package insta.servicio;
 
+
 import estructuras.ListaEnlazada;
+import excepciones.*;
+import insta.modelo.*;
+import persistencia.*;
+import red.*;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
 
-import excepciones.ArchivoCorruptoException;
-import excepciones.CuentaDesactivadaException;
-import excepciones.UsernameDuplicadoException;
+public class InstaServicio implements AutoCloseable {
 
-import insta.modelo.Mensaje;
-import insta.modelo.Publicacion;
-import insta.modelo.Seguimiento;
-import insta.modelo.Sticker;
-import insta.modelo.UsuarioInsta;
+    final RepositorioInsta repo;
 
-import persistencia.GestorBinario;
-import persistencia.GestorUsuariosInstaBinario;
+    final GestorPublicacionesBinario publicaciones;
+    final GestorSeguidoresBinario seguidores;
+    final GestorSeguidoresBinario seguidos;
+    final GestorInboxBinario inbox;
+    final GestorStickersBinario stickers;
 
-import java.io.IOException;
-
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-
-import java.util.Locale;
-import java.util.Objects;
-
-public class InstaServicio {
-
-    private static final String[] CARPETAS_PERSONALES = {
-        "imagenes",
-        "folders_personales",
-        "stickers_personales"
-    };
-
-    private static final String[] ARCHIVOS_PERSONALES = {
-        "following.ins",
-        "followers.ins",
-        "insta.ins",
-        "inbox.ins",
-        "stickers.ins"
-    };
-
-    private final Path carpetaRaiz;
-
-    private final GestorBinario gestorBinario;
-    private final GestorUsuariosInstaBinario gestorUsuarios;
+    final PublicacionServicio publicacionServicio;
+    final SeguimientoServicio seguimientoServicio;
+    final PerfilServicio perfilServicio;
+    final BusquedaServicio busquedaServicio;
+    final InboxServicio inboxServicio;
+    final StickerServicio stickerServicio;
 
     public InstaServicio()
             throws IOException, ArchivoCorruptoException {
-
         this("INSTA_RAIZ");
     }
 
-    public InstaServicio(String rutaRaiz)
+    public InstaServicio(String raiz)
             throws IOException, ArchivoCorruptoException {
 
-        Objects.requireNonNull(
-                rutaRaiz,
-                "La carpeta raíz no puede ser null."
-        );
+        repo = new RepositorioInsta(raiz);
 
-        if (rutaRaiz.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Debes indicar la carpeta raíz de INSTA+."
-            );
-        }
+        publicaciones = new GestorPublicacionesBinario(repo);
+        seguidores = new GestorSeguidoresBinario(repo, true);
+        seguidos = new GestorSeguidoresBinario(repo, false);
+        inbox = new GestorInboxBinario(repo);
+        stickers = new GestorStickersBinario(repo);
 
-        this.carpetaRaiz = Path.of(rutaRaiz)
-                .toAbsolutePath()
-                .normalize();
-
-        this.gestorBinario = new GestorBinario();
-
-        this.gestorUsuarios = new GestorUsuariosInstaBinario(
-                carpetaRaiz.toString()
-        );
-
-        inicializarAlmacenamiento();
-    }
-
-
-    private void inicializarAlmacenamiento()
-            throws IOException, ArchivoCorruptoException {
-
-        Files.createDirectories(carpetaRaiz);
+        publicacionServicio = new PublicacionServicio(this);
+        seguimientoServicio = new SeguimientoServicio(this);
+        perfilServicio = new PerfilServicio(this);
+        busquedaServicio = new BusquedaServicio(this);
+        inboxServicio = new InboxServicio(this);
+        stickerServicio = new StickerServicio(this);
 
         try {
-            gestorUsuarios.cargarUsuarios();
+            if (!repo.existe("users.ins")) {
+                try (DirectoryStream<Path> contenido =
+                             Files.newDirectoryStream(repo.ruta(""))) {
 
-        } catch (NoSuchFileException e) {
-
-            try (
-                    DirectoryStream<Path> contenido =
-                            Files.newDirectoryStream(carpetaRaiz)
-            ) {
-                if (contenido.iterator().hasNext()) {
-                    throw new ArchivoCorruptoException(
-                            "No se encontró users.ins, pero "
-                            + "INSTA_RAIZ ya contiene datos. "
-                            + "Es necesario revisar el almacenamiento "
-                            + "antes de continuar.",
-                            e
-                    );
+                    for (Path path : contenido) {
+                        if (!path.getFileName().toString()
+                                .equals("servidor.lock")) {
+                            throw new ArchivoCorruptoException(
+                                    "Falta users.ins en un almacenamiento con datos."
+                            );
+                        }
+                    }
                 }
+
+                repo.guardar(new RepositorioInsta.Cambio(
+                        "users.ins",
+                        new ListaEnlazada<UsuarioInsta>()
+                ));
             }
 
-            ListaEnlazada<UsuarioInsta> usuariosIniciales =
-                    new ListaEnlazada<>();
+            usuarios();
+            stickerServicio.inicializar();
+            ejemplos();
 
-            gestorUsuarios.guardarUsuarios(usuariosIniciales);
-        }
+        } catch (Exception e) {
+            repo.close();
 
-        Files.createDirectories(
-                carpetaRaiz.resolve("stickers_globales")
-        );
-    }
+            if (e instanceof ArchivoCorruptoException corrupto) {
+                throw corrupto;
+            }
 
-    public synchronized UsuarioInsta registrarUsuario(
-            String nombreCompleto,
-            char genero,
-            String username,
-            String password,
-            int edad
-    ) throws IOException,
-            ArchivoCorruptoException,
-            UsernameDuplicadoException {
+            if (e instanceof IOException io) {
+                throw io;
+            }
 
-        String usernameNormalizado =
-                normalizarUsername(username);
-
-        char generoNormalizado =
-                Character.toUpperCase(genero);
-
-        validarDatosRegistro(
-                nombreCompleto,
-                generoNormalizado,
-                usernameNormalizado,
-                password,
-                edad
-        );
-
-        ListaEnlazada<UsuarioInsta> usuarios =
-                gestorUsuarios.cargarUsuarios();
-
-        UsuarioInsta existente = usuarios.buscar(
-                usuario -> usuario.getUsername()
-                        .equalsIgnoreCase(usernameNormalizado)
-        );
-
-        if (existente != null) {
-            throw new UsernameDuplicadoException(
-                    "El username @"
-                    + usernameNormalizado
-                    + " ya está registrado."
+            throw new IOException(
+                    "No se pudo inicializar Instagram.",
+                    e
             );
         }
+    }
 
-        SeguridadPassword.Credenciales credenciales =
-                SeguridadPassword.generarCredenciales(password);
+    ListaEnlazada<UsuarioInsta> usuarios()
+            throws IOException, ArchivoCorruptoException {
 
-        UsuarioInsta nuevoUsuario = new UsuarioInsta(
-                nombreCompleto.strip(),
-                generoNormalizado,
-                usernameNormalizado,
-                credenciales.getPasswordHash(),
-                credenciales.getPasswordSalt(),
-                edad,
-                ""
-        );
+        ListaEnlazada<UsuarioInsta> lista =
+                repo.leer("users.ins", UsuarioInsta.class);
 
-        Path carpetaUsuario =
-                carpetaRaiz.resolve(usernameNormalizado);
+        Set<String> nombres = new HashSet<>();
 
-
-        Files.createDirectory(carpetaUsuario);
-
-        try {
-            prepararEspacioUsuario(carpetaUsuario);
-
-            usuarios.agregar(nuevoUsuario);
-            gestorUsuarios.guardarUsuarios(usuarios);
-
-        } catch (IOException | RuntimeException error) {
-
-
-            try {
-                retirarEspacioInicial(carpetaUsuario);
-
-            } catch (IOException errorLimpieza) {
-                error.addSuppressed(errorLimpieza);
+        for (UsuarioInsta usuario : lista) {
+            if (usuario.getUsername() == null
+                    || !usuario.getUsername()
+                            .matches("[a-z][a-z0-9_]{2,23}")
+                    || !nombres.add(usuario.getUsername())) {
+                throw new ArchivoCorruptoException(
+                        "Usuarios inválidos o duplicados."
+                );
             }
-
-            throw error;
         }
 
-        return nuevoUsuario;
+        return lista;
     }
 
-    public synchronized UsuarioInsta iniciarSesion(
-            String username,
-            String password
-    ) throws IOException, ArchivoCorruptoException {
-
-        if (username == null || password == null) {
-            return null;
-        }
-
-        String usernameNormalizado =
-                normalizarUsername(username);
-
-        ListaEnlazada<UsuarioInsta> usuarios =
-                gestorUsuarios.cargarUsuarios();
-
-        UsuarioInsta encontrado = usuarios.buscar(
-                usuario -> usuario.getUsername()
-                        .equalsIgnoreCase(usernameNormalizado)
-        );
-
-        if (encontrado == null) {
-            return null;
-        }
-
-        boolean passwordCorrecta = SeguridadPassword.verificar(
-                password,
-                encontrado.getPasswordHash(),
-                encontrado.getPasswordSalt()
-        );
-
-        if (!passwordCorrecta) {
-            return null;
-        }
-
-   
-        return encontrado;
+    static String normalizar(String valor) {
+        return Objects.requireNonNull(
+                valor,
+                "Falta el username."
+        ).strip().toLowerCase(Locale.ROOT);
     }
 
+    UsuarioInsta usuario(String nombre)
+            throws IOException, ArchivoCorruptoException {
 
-    public synchronized UsuarioInsta buscarUsuario(
-            String username
-    ) throws IOException, ArchivoCorruptoException {
-
-        String usernameNormalizado =
-                normalizarUsername(username);
-
-        ListaEnlazada<UsuarioInsta> usuarios =
-                gestorUsuarios.cargarUsuarios();
-
-        return usuarios.buscar(
-                usuario -> usuario.getUsername()
-                        .equalsIgnoreCase(usernameNormalizado)
-        );
-    }
-
-
-    public synchronized void exigirCuentaActiva(
-            String username
-    ) throws IOException,
-            ArchivoCorruptoException,
-            CuentaDesactivadaException {
-
-        UsuarioInsta usuario = buscarUsuario(username);
+        UsuarioInsta usuario = buscarUsuario(nombre);
 
         if (usuario == null) {
             throw new IllegalArgumentException(
-                    "La cuenta indicada no existe."
+                    "La cuenta no existe."
             );
         }
 
-        if (!usuario.estaActiva()) {
-            throw new CuentaDesactivadaException();
-        }
+        return usuario;
     }
 
-    private void prepararEspacioUsuario(
-            Path carpetaUsuario
-    ) throws IOException {
+    boolean visible(String nombre)
+            throws IOException, ArchivoCorruptoException {
 
-        for (String nombreCarpeta : CARPETAS_PERSONALES) {
-            Files.createDirectory(
-                    carpetaUsuario.resolve(nombreCarpeta)
+        UsuarioInsta usuario = buscarUsuario(nombre);
+
+        return usuario != null && usuario.estaActiva();
+    }
+
+    void guardarUsuario(
+            UsuarioInsta actualizado,
+            RepositorioInsta.Cambio... extras
+    ) throws IOException, ArchivoCorruptoException {
+
+        ListaEnlazada<UsuarioInsta> lista = usuarios();
+
+        lista.eliminarSi(
+                usuario -> usuario.getUsername()
+                        .equals(actualizado.getUsername())
+        );
+
+        lista.agregar(actualizado);
+
+        if (lista.size() > 100000) {
+            throw new IllegalArgumentException(
+                    "Límite de cuentas alcanzado."
             );
         }
 
-        gestorBinario.guardar(
-                carpetaUsuario.resolve("following.ins").toString(),
-                new ListaEnlazada<Seguimiento>()
+        RepositorioInsta.Cambio[] lote =
+                Arrays.copyOf(extras, extras.length + 1);
+
+        lote[extras.length] = new RepositorioInsta.Cambio(
+                "users.ins",
+                lista
         );
 
-        gestorBinario.guardar(
-                carpetaUsuario.resolve("followers.ins").toString(),
-                new ListaEnlazada<Seguimiento>()
-        );
-
-        gestorBinario.guardar(
-                carpetaUsuario.resolve("insta.ins").toString(),
-                new ListaEnlazada<Publicacion>()
-        );
-
-        gestorBinario.guardar(
-                carpetaUsuario.resolve("inbox.ins").toString(),
-                new ListaEnlazada<Mensaje>()
-        );
-
-        gestorBinario.guardar(
-                carpetaUsuario.resolve("stickers.ins").toString(),
-                new ListaEnlazada<Sticker>()
-        );
+        repo.guardar(lote);
     }
 
-
-    private void retirarEspacioInicial(
-            Path carpetaUsuario
-    ) throws IOException {
-
-        for (String nombreArchivo : ARCHIVOS_PERSONALES) {
-            Files.deleteIfExists(
-                    carpetaUsuario.resolve(nombreArchivo)
-            );
-        }
-
-        for (String nombreCarpeta : CARPETAS_PERSONALES) {
-            Files.deleteIfExists(
-                    carpetaUsuario.resolve(nombreCarpeta)
-            );
-        }
-
-        Files.deleteIfExists(carpetaUsuario);
-    }
-
-    private String normalizarUsername(String username) {
-        Objects.requireNonNull(
-                username,
-                "El username no puede ser null."
-        );
-
-        return username.strip().toLowerCase(Locale.ROOT);
-    }
-
-    private void validarDatosRegistro(
-            String nombreCompleto,
+    static void validarDatos(
+            String nombre,
             char genero,
-            String username,
-            String password,
-            int edad
+            int edad,
+            String password
     ) {
-        if (nombreCompleto == null
-                || nombreCompleto.isBlank()) {
-
+        if (nombre == null
+                || nombre.isBlank()
+                || nombre.length() > 100) {
             throw new IllegalArgumentException(
-                    "Debes ingresar tu nombre completo."
-            );
-        }
-
-     
-        if (!username.matches("[a-z][a-z0-9_]{2,23}")) {
-            throw new IllegalArgumentException(
-                    "El username debe tener de 3 a 24 caracteres, "
-                    + "empezar por una letra y contener únicamente "
-                    + "letras sin acentos, números o guion bajo."
-            );
-        }
-
-        boolean nombreReservado = username.matches(
-                "con|prn|aux|nul|com[1-9]|lpt[1-9]"
-        );
-
-        if (nombreReservado
-                || username.equals("stickers_globales")) {
-
-            throw new IllegalArgumentException(
-                    "Ese username está reservado. Elige otro."
+                    "El nombre debe tener entre 1 y 100 caracteres."
             );
         }
 
@@ -381,24 +197,324 @@ public class InstaServicio {
         }
 
         if (edad < 1 || edad > 120) {
-            throw new IllegalArgumentException(
-                    "La edad debe estar entre 1 y 120 años."
-            );
+            throw new IllegalArgumentException("Edad inválida.");
         }
 
-        if (password == null
-                || password.isBlank()
+        if (password != null
+                && (password.isBlank()
                 || password.length() < 4
-                || password.length() > 128) {
-
+                || password.length() > 128)) {
             throw new IllegalArgumentException(
-                    "La contraseña debe tener entre 4 y 128 "
-                    + "caracteres y no estar formada solo por espacios."
+                    "La contraseña debe tener de 4 a 128 caracteres."
             );
         }
     }
 
+    public synchronized UsuarioInsta registrarUsuario(
+            String nombre,
+            char genero,
+            String username,
+            String password,
+            int edad
+    ) throws IOException,
+            ArchivoCorruptoException,
+            UsernameDuplicadoException {
+
+        return registrarUsuario(
+                nombre,
+                genero,
+                username,
+                password,
+                edad,
+                null
+        );
+    }
+
+    public synchronized UsuarioInsta registrarUsuario(
+            String nombre,
+            char genero,
+            String username,
+            String password,
+            int edad,
+            byte[] foto
+    ) throws IOException,
+            ArchivoCorruptoException,
+            UsernameDuplicadoException {
+
+        String id = normalizar(username);
+        genero = Character.toUpperCase(genero);
+
+        Objects.requireNonNull(password, "Falta la contraseña.");
+        validarDatos(nombre, genero, edad, password);
+
+        if (!id.matches("[a-z][a-z0-9_]{2,23}")
+                || id.matches(
+                        "con|prn|aux|nul|com[1-9]|lpt[1-9]|stickers_globales"
+                )) {
+            throw new IllegalArgumentException(
+                    "Username inválido o reservado."
+            );
+        }
+
+        if (buscarUsuario(id) != null) {
+            throw new UsernameDuplicadoException();
+        }
+
+        if (repo.existe(id)) {
+            throw new IOException(
+                    "Ya existe una carpeta sin cuenta con ese nombre."
+            );
+        }
+
+        var credenciales =
+                SeguridadPassword.generarCredenciales(password);
+
+        String rutaFoto = id
+                + "/imagenes/perfil-"
+                + UUID.randomUUID()
+                + ".png";
+
+        byte[] imagen = foto == null
+                ? ImagenesInsta.dibujar(
+                        id.substring(0, 1).toUpperCase(Locale.ROOT),
+                        0x425b76
+                )
+                : ImagenesInsta.validar(foto);
+
+        UsuarioInsta usuario = new UsuarioInsta(
+                nombre.strip(),
+                genero,
+                id,
+                credenciales.getPasswordHash(),
+                credenciales.getPasswordSalt(),
+                edad,
+                rutaFoto
+        );
+
+        guardarUsuario(
+                usuario,
+                publicaciones.cambio(id, new ListaEnlazada<>()),
+                seguidores.cambio(id, new ListaEnlazada<>()),
+                seguidos.cambio(id, new ListaEnlazada<>()),
+                inbox.cambio(id, new ListaEnlazada<>()),
+                stickers.cambio(
+                        id,
+                        repo.leer("globales.ins", Sticker.class)
+                ),
+                new RepositorioInsta.Cambio(rutaFoto, imagen),
+                new RepositorioInsta.Cambio(
+                        id + "/folders_personales",
+                        Boolean.TRUE
+                ),
+                new RepositorioInsta.Cambio(
+                        id + "/stickers_personales",
+                        Boolean.TRUE
+                )
+        );
+
+        return usuario;
+    }
+
+    public synchronized UsuarioInsta iniciarSesion(
+            String username,
+            String password
+    ) throws IOException, ArchivoCorruptoException {
+
+        if (username == null
+                || password == null
+                || username.length() > 24
+                || password.length() > 128) {
+            return null;
+        }
+
+        UsuarioInsta usuario = buscarUsuario(username);
+
+        return usuario != null
+                && SeguridadPassword.verificar(
+                        password,
+                        usuario.getPasswordHash(),
+                        usuario.getPasswordSalt()
+                )
+                ? usuario
+                : null;
+    }
+
+    public synchronized UsuarioInsta buscarUsuario(String username)
+            throws IOException, ArchivoCorruptoException {
+
+        String id = normalizar(username);
+
+        return usuarios().buscar(
+                usuario -> usuario.getUsername().equals(id)
+        );
+    }
+
+    public synchronized void exigirCuentaActiva(String username)
+            throws IOException,
+            ArchivoCorruptoException,
+            CuentaDesactivadaException {
+
+        if (!usuario(username).estaActiva()) {
+            throw new CuentaDesactivadaException();
+        }
+    }
+
+    public synchronized Respuesta operar(
+            String actor,
+            Solicitud solicitud
+    ) throws Exception {
+
+        usuario(actor);
+
+        boolean perfilPropio =
+                solicitud.getOperacion() == Solicitud.Operacion.PERFIL
+                && normalizar(solicitud.arg(0)).equals(actor);
+
+        if (solicitud.getOperacion()
+                != Solicitud.Operacion.REACTIVAR
+                && !perfilPropio) {
+            exigirCuentaActiva(actor);
+        }
+
+        return switch (solicitud.getOperacion()) {
+            case PUBLICAR_TEXTO, PUBLICAR_IMAGEN,
+                    PUBLICAR_STICKER, PUBLICACIONES, TIMELINE ->
+                publicacionServicio.ejecutar(actor, solicitud);
+
+            case SEGUIR, DEJAR_SEGUIR, SEGUIDORES, SEGUIDOS ->
+                seguimientoServicio.ejecutar(actor, solicitud);
+
+            case PERFIL, EDITAR_PERFIL, FOTO_PERFIL,
+                    DESACTIVAR, REACTIVAR ->
+                perfilServicio.ejecutar(actor, solicitud);
+
+            case BUSCAR_PERSONAS, BUSCAR_HASHTAG, MENCIONES ->
+                busquedaServicio.ejecutar(actor, solicitud);
+
+            case ENVIAR_MENSAJE, ENVIAR_STICKER,
+                    CONVERSACION, LEER_CONVERSACION,
+                    ELIMINAR_CONVERSACION, NO_LEIDOS ->
+                inboxServicio.ejecutar(actor, solicitud);
+
+            case STICKERS, IMPORTAR_STICKER,
+                    CREAR_CARPETA, CARPETAS, ARCHIVO ->
+                stickerServicio.ejecutar(actor, solicitud);
+
+            default ->
+                throw new IllegalArgumentException(
+                        "Operación no soportada."
+                );
+        };
+    }
+
+    <T> Respuesta pagina(
+            ListaEnlazada<T> lista,
+            String desplazamiento
+    ) {
+        int desde = Integer.parseInt(desplazamiento);
+
+        if (desde < 0) {
+            throw new IllegalArgumentException("Página inválida.");
+        }
+
+        ListaEnlazada<T> pagina = new ListaEnlazada<>();
+        int indice = 0;
+
+        for (T valor : lista) {
+            if (indice++ < desde) {
+                continue;
+            }
+
+            if (pagina.size() == 100) {
+                break;
+            }
+
+            pagina.agregar(valor);
+        }
+
+        return Respuesta.exito("Consulta completada.")
+                .conLista(pagina)
+                .conTotal(lista.size());
+    }
+
+    private void ejemplos() throws Exception {
+        String[] bases = {
+            "noticias_demo",
+            "deporte_demo",
+            "cine_demo"
+        };
+
+        if (!repo.existe("semilla.ins")) {
+            ListaEnlazada<String> nombres = new ListaEnlazada<>();
+
+            for (String base : bases) {
+                String nombre = base;
+                int numero = 1;
+
+                while (buscarUsuario(nombre) != null
+                        || repo.existe(nombre)) {
+                    nombre = base + numero++;
+                }
+
+                nombres.agregar(nombre);
+            }
+
+            repo.guardar(new RepositorioInsta.Cambio(
+                    "semilla.ins",
+                    nombres
+            ));
+        }
+
+        ListaEnlazada<String> nombres =
+                repo.leer("semilla.ins", String.class);
+
+        String[] temas = {
+            "Noticias del campus #noticias",
+            "Entrenamos juntos #deporte",
+            "Recomendaciones de cine #cine"
+        };
+
+        int indice = 0;
+
+        for (String id : nombres) {
+            if (buscarUsuario(id) == null) {
+                registrarUsuario(
+                        "Cuenta de ejemplo " + (indice + 1),
+                        'M',
+                        id,
+                        "Demo1234",
+                        20
+                );
+            }
+
+            ListaEnlazada<Publicacion> lista =
+                    publicaciones.cargar(id);
+
+            if (lista.isEmpty()) {
+                lista.agregar(Publicacion.crearTexto(
+                        id,
+                        temas[indice % temas.length]
+                ));
+
+                lista.agregar(Publicacion.crearTexto(
+                        id,
+                        "Comparte tu mirada. "
+                                + temas[indice % temas.length]
+                ));
+
+                publicaciones.guardar(id, lista);
+            }
+
+            indice++;
+        }
+    }
+
     public String getRutaRaiz() {
-        return carpetaRaiz.toString();
+        return repo.getRutaRaiz();
+    }
+
+    @Override
+    public synchronized void close() throws IOException {
+        repo.close();
     }
 }

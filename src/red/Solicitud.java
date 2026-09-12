@@ -11,48 +11,61 @@ import java.util.Objects;
  */
 public class Solicitud implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     public enum Operacion {
         REGISTRAR_USUARIO,
         INICIAR_SESION,
-        CERRAR_SESION
+        CERRAR_SESION,
+        PUBLICAR_TEXTO,
+        PUBLICAR_IMAGEN,
+        PUBLICAR_STICKER,
+        PUBLICACIONES,
+        TIMELINE,
+        SEGUIR,
+        DEJAR_SEGUIR,
+        SEGUIDORES,
+        SEGUIDOS,
+        PERFIL,
+        EDITAR_PERFIL,
+        FOTO_PERFIL,
+        DESACTIVAR,
+        REACTIVAR,
+        BUSCAR_PERSONAS,
+        BUSCAR_HASHTAG,
+        MENCIONES,
+        ENVIAR_MENSAJE,
+        ENVIAR_STICKER,
+        CONVERSACION,
+        LEER_CONVERSACION,
+        ELIMINAR_CONVERSACION,
+        NO_LEIDOS,
+        STICKERS,
+        IMPORTAR_STICKER,
+        CREAR_CARPETA,
+        CARPETAS,
+        ARCHIVO
     }
 
     private final Operacion operacion;
-
-    private final String nombreCompleto;
-    private final char genero;
-    private final String username;
-    private final String password;
-    private final int edad;
-
     private final String tokenSesion;
+    private final String[] argumentos;
+    private final byte[] archivo;
 
-    private Solicitud(
+    public Solicitud(
             Operacion operacion,
-            String nombreCompleto,
-            char genero,
-            String username,
-            String password,
-            int edad,
-            String tokenSesion
+            String tokenSesion,
+            byte[] archivo,
+            String... argumentos
     ) {
-        this.operacion = Objects.requireNonNull(
-                operacion,
-                "Debes indicar la operación."
-        );
-
-        this.nombreCompleto = nombreCompleto;
-        this.genero = genero;
-        this.username = username;
-        this.password = password;
-        this.edad = edad;
+        this.operacion = operacion;
         this.tokenSesion = tokenSesion;
+        this.argumentos = argumentos.clone();
+        this.archivo = archivo == null ? null : archivo.clone();
     }
 
     public static Solicitud registrarUsuario(
-            String nombreCompleto,
+            String nombre,
             char genero,
             String username,
             String password,
@@ -60,12 +73,13 @@ public class Solicitud implements Serializable {
     ) {
         return new Solicitud(
                 Operacion.REGISTRAR_USUARIO,
-                nombreCompleto,
-                genero,
+                "",
+                null,
+                nombre,
+                String.valueOf(genero),
                 username,
                 password,
-                edad,
-                ""
+                String.valueOf(edad)
         );
     }
 
@@ -76,23 +90,17 @@ public class Solicitud implements Serializable {
         return new Solicitud(
                 Operacion.INICIAR_SESION,
                 "",
-                '\0',
+                null,
                 username,
-                password,
-                0,
-                ""
+                password
         );
     }
 
-    public static Solicitud cerrarSesion(String tokenSesion) {
+    public static Solicitud cerrarSesion(String token) {
         return new Solicitud(
                 Operacion.CERRAR_SESION,
-                "",
-                '\0',
-                "",
-                "",
-                0,
-                tokenSesion
+                token,
+                null
         );
     }
 
@@ -100,33 +108,21 @@ public class Solicitud implements Serializable {
         return operacion;
     }
 
-    public String getNombreCompleto() {
-        return nombreCompleto;
-    }
-
-    public char getGenero() {
-        return genero;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public int getEdad() {
-        return edad;
-    }
-
     public String getTokenSesion() {
         return tokenSesion;
     }
 
+    public byte[] getArchivo() {
+        return archivo;
+    }
 
-    @Override
-    public String toString() {
-        return "Solicitud{operacion=" + operacion + "}";
+    public String arg(int indice) {
+        if (argumentos == null
+                || indice >= argumentos.length
+                || argumentos[indice] == null) {
+            throw new IllegalArgumentException("Faltan datos.");
+        }
+
+        return argumentos[indice];
     }
 }
