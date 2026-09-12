@@ -2,6 +2,29 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/persistencia/RepositorioInsta.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/persistencia/GestorListaInsta.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/persistencia/GestorPublicacionesBinario.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/persistencia/GestorSeguidoresBinario.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/persistencia/GestorInboxBinario.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/persistencia/GestorStickersBinario.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/red/Solicitud.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/red/Respuesta.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/ImagenesInsta.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/InstaServicio.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/PublicacionServicio.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/SeguimientoServicio.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/PerfilServicio.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/BusquedaServicio.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/InboxServicio.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/insta/servicio/StickerServicio.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/red/FiltroRed.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/red/ManejadorCliente.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/red/Servidor.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/red/Cliente.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/hilos/HiloNotificaciones.java</file>
+            <file>file:/C:/Users/diego/OneDrive/Documentos/Laboratorio%20semana%201%20progra%202/Proyecto-2-Programaci-n---Diego-Chaves-y-Juan-Carlos-Alcerro-/src/modelo/TipoUsuario.java</file>
+        </group>
     </open-files>
 </project-private>
