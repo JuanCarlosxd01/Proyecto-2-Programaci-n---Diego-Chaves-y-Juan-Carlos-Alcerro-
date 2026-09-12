@@ -3,18 +3,17 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package red;
-import insta.modelo.UsuarioInsta;
-
+import estructuras.ListaEnlazada;
+import insta.modelo.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Objects;
 /**
  *
  * @author diego
  */
 public class Respuesta implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     public enum Codigo {
         OK,
@@ -31,88 +30,63 @@ public class Respuesta implements Serializable {
     private final Codigo codigo;
     private final String mensaje;
 
-    private final DatosUsuario usuario;
-    private final String tokenSesion;
+    private DatosUsuario usuario;
+    private String tokenSesion = "";
+    private ListaEnlazada<?> elementos = new ListaEnlazada<>();
+    private byte[] archivo;
+    private int total;
 
-    private Respuesta(
-            Codigo codigo,
-            String mensaje,
-            DatosUsuario usuario,
-            String tokenSesion
-    ) {
-        this.codigo = Objects.requireNonNull(
-                codigo,
-                "Debes indicar el código de respuesta."
-        );
-
-        this.mensaje = Objects.requireNonNull(
-                mensaje,
-                "El mensaje de respuesta no puede ser null."
-        );
-
-        this.usuario = usuario;
-        this.tokenSesion = tokenSesion == null
-                ? ""
-                : tokenSesion;
+    private Respuesta(Codigo codigo, String mensaje) {
+        this.codigo = codigo;
+        this.mensaje = mensaje;
     }
 
     public static Respuesta exito(String mensaje) {
-        return new Respuesta(
-                Codigo.OK,
-                mensaje,
-                null,
-                ""
-        );
+        return new Respuesta(Codigo.OK, mensaje);
+    }
+
+    public static Respuesta error(Codigo codigo, String mensaje) {
+        return new Respuesta(codigo, mensaje);
     }
 
     public static Respuesta cuentaCreada(UsuarioInsta usuario) {
-        return new Respuesta(
-                Codigo.OK,
-                "Cuenta creada correctamente. Ya puedes iniciar sesión.",
-                new DatosUsuario(usuario),
-                ""
+        return exito("Cuenta creada.").conUsuario(
+                new DatosUsuario(usuario, 0, 0, 0, false)
         );
     }
 
     public static Respuesta sesionIniciada(
             UsuarioInsta usuario,
-            String tokenSesion
+            String token
     ) {
-        Objects.requireNonNull(
-                tokenSesion,
-                "El token de sesión no puede ser null."
-        );
+        Respuesta respuesta = exito("Sesión iniciada.")
+                .conUsuario(
+                        new DatosUsuario(usuario, 0, 0, 0, false)
+                );
 
-        if (tokenSesion.isBlank()) {
-            throw new IllegalArgumentException(
-                    "El token de sesión no puede estar vacío."
-            );
-        }
-
-        return new Respuesta(
-                Codigo.OK,
-                "Sesión iniciada correctamente.",
-                new DatosUsuario(usuario),
-                tokenSesion
-        );
+        respuesta.tokenSesion = token;
+        return respuesta;
     }
 
-    public static Respuesta error(
-            Codigo codigo,
-            String mensaje
-    ) {
-        if (codigo == Codigo.OK) {
-            throw new IllegalArgumentException(
-                    "Una respuesta de error no puede usar el código OK."
-            );
-        }
+    public Respuesta conUsuario(DatosUsuario usuario) {
+        this.usuario = usuario;
+        return this;
+    }
 
-        return new Respuesta(
-                codigo,
-                mensaje,
-                null,
-                ""
-        );
+    public Respuesta conLista(ListaEnlazada<?> elementos) {
+        this.elementos = elementos;
+        total = elementos.size();
+        return this;
+    }
+
+    public Respuesta conTotal(int total) {
+        this.total = total;
+        return this;
+    }
+
+    public Respuesta conArchivo(byte[] archivo) {
+        this.archivo = archivo;
+        return this;
     }
 
     public Codigo getCodigo() {
@@ -131,6 +105,10 @@ public class Respuesta implements Serializable {
         return tokenSesion;
     }
 
+    public int getTotal() {
+        return total;
+    }
+
     public boolean esExitosa() {
         return codigo == Codigo.OK;
     }
@@ -139,44 +117,77 @@ public class Respuesta implements Serializable {
         return usuario != null;
     }
 
-    @Override
-    public String toString() {
-        return "Respuesta{codigo=" + codigo + "}";
+    public byte[] getArchivo() {
+        return archivo == null ? null : archivo.clone();
     }
 
+    public <T> ListaEnlazada<T> getElementos(Class<T> tipo) {
+        ListaEnlazada<T> resultado = new ListaEnlazada<>();
 
-    public static final class DatosUsuario
-            implements Serializable {
+        for (Object elemento : elementos) {
+            resultado.agregar(tipo.cast(elemento));
+        }
 
-        private static final long serialVersionUID = 1L;
+        return resultado;
+    }
+
+    public ListaEnlazada<Publicacion> getPublicaciones() {
+        return getElementos(Publicacion.class);
+    }
+
+    public ListaEnlazada<Mensaje> getMensajes() {
+        return getElementos(Mensaje.class);
+    }
+
+    public ListaEnlazada<Sticker> getStickers() {
+        return getElementos(Sticker.class);
+    }
+
+    public ListaEnlazada<DatosUsuario> getUsuarios() {
+        return getElementos(DatosUsuario.class);
+    }
+
+    public ListaEnlazada<String> getCarpetas() {
+        return getElementos(String.class);
+    }
+
+    public static final class DatosUsuario implements Serializable {
+
+        private static final long serialVersionUID = 2L;
 
         private final String username;
         private final String nombreCompleto;
+        private final String rutaFotoPerfil;
 
         private final char genero;
         private final int edad;
-
-        private final LocalDateTime fechaRegistro;
+        private final int followers;
+        private final int following;
+        private final int publicaciones;
 
         private final boolean activa;
-        private final String rutaFotoPerfil;
+        private final boolean loSigo;
+        private final LocalDateTime fechaRegistro;
 
-        private DatosUsuario(UsuarioInsta usuario) {
-            Objects.requireNonNull(
-                    usuario,
-                    "El usuario no puede estar vacio"
-            );
+        public DatosUsuario(
+                UsuarioInsta usuario,
+                int followers,
+                int following,
+                int publicaciones,
+                boolean loSigo
+        ) {
+            username = usuario.getUsername();
+            nombreCompleto = usuario.getNombreCompleto();
+            genero = usuario.getGenero();
+            edad = usuario.getEdad();
+            rutaFotoPerfil = usuario.getRutaFotoPerfil();
+            activa = usuario.estaActiva();
+            fechaRegistro = usuario.getFechaRegistro();
 
-            this.username = usuario.getUsername();
-            this.nombreCompleto = usuario.getNombreCompleto();
-
-            this.genero = usuario.getGenero();
-            this.edad = usuario.getEdad();
-
-            this.fechaRegistro = usuario.getFechaRegistro();
-
-            this.activa = usuario.estaActiva();
-            this.rutaFotoPerfil = usuario.getRutaFotoPerfil();
+            this.followers = followers;
+            this.following = following;
+            this.publicaciones = publicaciones;
+            this.loSigo = loSigo;
         }
 
         public String getUsername() {
@@ -207,9 +218,20 @@ public class Respuesta implements Serializable {
             return rutaFotoPerfil;
         }
 
-        @Override
-        public String toString() {
-            return "@" + username + " - " + nombreCompleto;
+        public int getFollowers() {
+            return followers;
+        }
+
+        public int getFollowing() {
+            return following;
+        }
+
+        public int getPublicaciones() {
+            return publicaciones;
+        }
+
+        public boolean loSigo() {
+            return loSigo;
         }
     }
 }
