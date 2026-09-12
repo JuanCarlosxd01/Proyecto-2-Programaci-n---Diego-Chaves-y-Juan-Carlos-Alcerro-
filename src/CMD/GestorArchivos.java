@@ -38,7 +38,7 @@ public class GestorArchivos {
         if (relativa.startsWith(File.separator)) {
             relativa = relativa.substring(1);
         }
-        return "C:\\ConsolaSimulada" + (relativa.isEmpty() ? "" : "\\" + relativa) + ">";
+        return "Z\\" + (relativa.isEmpty() ? "" : "\\" + relativa) + ">";
     }
 
     public String crearDirectorio(String nombre) {

@@ -1,7 +1,8 @@
 
 package insta.interfaz;
 
+import javax.swing.*;
 
-public class TimelinePanel {
+public class TimelinePanel extends JPanel{
 
 }

@@ -3,10 +3,12 @@ package interfaz;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import javax.swing.event.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import CMD.*;
 import sistema.*;
+import insta.interfaz.*;
+import java.io.File;
 
 public class EscritorioPanel extends JPanel {
 
@@ -116,7 +118,8 @@ public class EscritorioPanel extends JPanel {
         crearIcono("Música", "♫", 0, 3);
         crearIcono("CMD", "⌨", 1, 0);
         crearIcono("INSTA+","📷", 1, 1);
-        btnUsuarios = crearIcono("Usuarios", "👥", 1, 2);
+        crearIcono("Imágenes", "🖼️", 1, 2);
+        btnUsuarios = crearIcono("Usuarios", "👥", 1, 3);
         btnUsuarios.setVisible(false);
     }
 
@@ -195,6 +198,13 @@ public class EscritorioPanel extends JPanel {
                 ventana.dispose();
             });
             ventana.add(musica);
+            
+            ventana.addInternalFrameListener(new InternalFrameAdapter() {
+                @Override
+                public void internalFrameClosing(InternalFrameEvent e){
+                    musica.cerrarReproductor();
+                }
+            });
         }
         else if(nombre.equals("Usuarios")){
             if(!Sesion.esAdministrador()){
@@ -204,6 +214,28 @@ public class EscritorioPanel extends JPanel {
             }
             AdministrarUsuariosPanel usuarios =new AdministrarUsuariosPanel(gestorUsuarios);
             ventana.add(usuarios);
+        }
+        else if(nombre.equals("INSTA+")){
+            InstaPanel insta = new InstaPanel();
+            insta.setAccionCerrar (() ->{
+                ventana.dispose();
+            });
+            ventana.add(insta);
+        }
+        else if(nombre.equals("Archivos")){
+            ExploradorPanel explorador = new ExploradorPanel();
+            explorador.setAccionCerrar(() -> {
+                ventana.dispose();
+            });
+            ventana.add(explorador);
+        }
+        else if(nombre.equals("Imágenes")){
+            File carpeta = new File("Z/" + Sesion.getUsuarioActual().getUsername() + "/Mis Imágenes");
+            VisorImagenPanel visor = new VisorImagenPanel(carpeta);
+            visor.setAccionCerrar(() ->{
+                ventana.dispose();
+            });
+            ventana.add(visor);
         }
         else{
             JPanel contenido = new JPanel(new BorderLayout());

@@ -1,7 +1,8 @@
 
 package insta.interfaz;
 
+import javax.swing.*;
 
-public class EditarPerfilPanel {
+public class EditarPerfilPanel extends JPanel{
 
 }

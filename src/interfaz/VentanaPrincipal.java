@@ -16,6 +16,7 @@ public class VentanaPrincipal extends JFrame{
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setResizable(false);
         
         gestorUsuarios = new GestorUsuarios();
         transicion = new CardLayout();

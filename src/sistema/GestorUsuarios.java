@@ -19,6 +19,10 @@ public class GestorUsuarios {
         if(usuarios.isEmpty()){
             crearAdministradorInicial();
         }
+        
+        for (UsuarioSistema usuario : usuarios) {
+            crearCarpetasUsuario(usuario);
+        }
     }
 
     private void crearAdministradorInicial() {
@@ -60,10 +64,24 @@ public class GestorUsuarios {
 
     private void crearCarpetasUsuario(UsuarioSistema usuario) {
         File carpetaUsuario = new File("Z/" + usuario.getUsername());
-        carpetaUsuario.mkdirs();
-        new File(carpetaUsuario, "Mis Documentos").mkdir();
-        new File(carpetaUsuario, "Música").mkdir();
-        new File(carpetaUsuario, "Mis Imágenes").mkdir();
+        if (!carpetaUsuario.exists()) {
+            carpetaUsuario.mkdirs();
+        }
+        File documentos = new File(carpetaUsuario, "Mis Documentos");
+        File musica = new File(carpetaUsuario, "Música");
+        File imagenes = new File(carpetaUsuario, "Mis Imágenes");
+        
+        if (!documentos.exists()) {
+            documentos.mkdirs();
+        }
+
+        if (!musica.exists()) {
+            musica.mkdirs();
+        }
+
+        if (!imagenes.exists()) {
+            imagenes.mkdirs();
+        }
     }
 
     public ArrayList<UsuarioSistema> getUsuarios() {
