@@ -109,6 +109,10 @@ public final class RutasSistema {
             return getRaizSistema();
         }
 
+        if (Sesion.esAdministrador()) {
+            return getRaizSistema();
+        }
+
         return getCarpetaUsuario(usuario);
     }
 
@@ -250,5 +254,23 @@ public final class RutasSistema {
             numero++;
         } while (candidato.exists());
         return candidato;
+    }
+    
+    public static boolean esCarpetaDeUsuario(File archivo) {
+        if (archivo == null || !archivo.isDirectory()) {
+            return false;
+        }
+
+        try {
+            File padre = archivo.getParentFile();
+
+            if (padre == null) {
+                return false;
+            }
+
+            return padre.getCanonicalFile().equals(getRaizSistema().getCanonicalFile());
+        } catch (IOException e) {
+            return false;
+        }
     }
 }

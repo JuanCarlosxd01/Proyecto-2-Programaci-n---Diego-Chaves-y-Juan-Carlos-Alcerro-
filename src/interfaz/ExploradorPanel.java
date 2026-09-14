@@ -357,6 +357,11 @@ public class ExploradorPanel extends JPanel {
             DialogosWindows.showMessageDialog(this, "No puede eliminar la carpeta raíz del usuario.");
             return;
         }
+        
+        if (RutasSistema.esCarpetaDeUsuario(seleccionado)) {
+            DialogosWindows.showMessageDialog(this, "No puede eliminar la carpeta principal de un usuario.");
+            return;
+        }
 
         if (RutasSistema.esCarpetaPrincipal(seleccionado)) {
             DialogosWindows.showMessageDialog(this, "No puede eliminar las carpetas principales: Mis Documentos, Música o Mis Imágenes.");
@@ -529,6 +534,11 @@ public class ExploradorPanel extends JPanel {
 
         if (seleccionado.equals(carpetaRaiz)) {
             DialogosWindows.showMessageDialog(this, "No puede renombrar la carpeta raíz.");
+            return;
+        }
+        
+        if (RutasSistema.esCarpetaDeUsuario(seleccionado)) {
+            DialogosWindows.showMessageDialog(this, "No puede eliminar la carpeta principal de un usuario.");
             return;
         }
 
