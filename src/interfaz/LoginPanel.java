@@ -453,4 +453,20 @@ public class LoginPanel extends JPanel {
             mostrarAviso("Usuario o contraseña incorrectos.");
         }
     }
+    
+    public void limpiarCampos() {
+        txtUsuario.setText("Nombre de usuario");
+        txtUsuario.setForeground(Color.GRAY);
+
+        txtContrasena.setText("Contraseña");
+        txtContrasena.setEchoChar((char) 0);
+        txtContrasena.setForeground(new Color(200, 200, 200));
+
+        chkVerContrasena.setSelected(false);
+
+        ocultarAviso();
+
+        revalidate();
+        repaint();
+    }
 }

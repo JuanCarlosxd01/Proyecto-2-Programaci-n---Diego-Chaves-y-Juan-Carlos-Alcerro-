@@ -1026,8 +1026,33 @@ public class EscritorioPanel extends JPanel {
         if (escritorio instanceof EscritorioWindowsPane pane) pane.setColorFondo(new Color(18, 56, 92));
     }
 
-    private void cerrarSesion(){
+    private void cerrarSesion() {
+        LoginPanel loginPanel = buscarLoginPanel(contenedor);
+
+        if (loginPanel != null) {
+            loginPanel.limpiarCampos();
+        }
+
         Sesion.cerrarSesion();
+
         transicion.show(contenedor, "LOGIN");
+    }
+    
+    private LoginPanel buscarLoginPanel(Container contenedor) {
+        for (Component componente : contenedor.getComponents()) {
+            if (componente instanceof LoginPanel loginPanel) {
+                return loginPanel;
+            }
+
+            if (componente instanceof Container interno) {
+                LoginPanel encontrado = buscarLoginPanel(interno);
+
+                if (encontrado != null) {
+                    return encontrado;
+                }
+            }
+        }
+
+        return null;
     }
 }
