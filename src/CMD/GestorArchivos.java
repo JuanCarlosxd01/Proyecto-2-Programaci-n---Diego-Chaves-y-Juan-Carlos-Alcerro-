@@ -267,7 +267,16 @@ public class GestorArchivos {
         if (archivo == null) {
             return false;
         }
-        return archivo.toPath().startsWith(directorioRaiz.toPath());
+
+        try {
+            File archivoCanonico = archivo.getCanonicalFile();
+            File raizCanonica = directorioRaiz.getCanonicalFile();
+
+            return archivoCanonico.toPath().startsWith(raizCanonica.toPath());
+
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private File normalizar(File archivo) {

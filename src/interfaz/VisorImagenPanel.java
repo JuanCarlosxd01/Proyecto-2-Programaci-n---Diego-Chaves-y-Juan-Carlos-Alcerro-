@@ -316,6 +316,28 @@ public class VisorImagenPanel extends JPanel {
             }
         }
     }
+    
+    public void seleccionarImagen(File archivo) {
+        if (archivo == null || imagenes == null || imagenes.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < imagenes.size(); i++) {
+            try {
+                if (imagenes.get(i).getCanonicalFile().equals(archivo.getCanonicalFile())) {
+                    indiceActual = i;
+                    mostrarImagen();
+                    return;
+                }
+            } catch (IOException e) {
+                if (imagenes.get(i).equals(archivo)) {
+                    indiceActual = i;
+                    mostrarImagen();
+                    return;
+                }
+            }
+        }
+    }
 
     public void setAccionCerrar(Runnable accionCerrar) {
         this.accionCerrar = accionCerrar;

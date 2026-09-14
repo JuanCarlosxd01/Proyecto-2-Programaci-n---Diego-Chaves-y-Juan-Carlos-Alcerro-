@@ -1,3 +1,4 @@
+
 package interfaz;
 
 import java.awt.*;
@@ -10,8 +11,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.*;
 import javax.swing.tree.*;
-import sistema.RutasSistema;
-import sistema.Sesion;
+import sistema.*;
+import modelo.UsuarioSistema;
 import hilos.HiloOrganizador;
 
 public class ExploradorPanel extends JPanel {
@@ -269,11 +270,30 @@ public class ExploradorPanel extends JPanel {
             arbol.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    if (e.getClickCount() == 2) {
-                        File seleccionado = obtenerSeleccionado();
-                        if (seleccionado != null && seleccionado.isFile() && accionAbrirArchivo != null) {
-                            accionAbrirArchivo.accept(seleccionado);
-                        }
+                    if (e.getClickCount() != 2) {
+                        return;
+                    }
+
+                    TreePath ruta = arbol.getPathForLocation(e.getX(), e.getY());
+
+                    if (ruta == null) {
+                        return;
+                    }
+
+                    DefaultMutableTreeNode nodo = (DefaultMutableTreeNode) ruta.getLastPathComponent();
+
+                    Object objeto = nodo.getUserObject();
+
+                    if (!(objeto instanceof File archivo)) {
+                        return;
+                    }
+
+                    if (archivo.isDirectory()) {
+                        return;
+                    }
+
+                    if (accionAbrirArchivo != null) {
+                        accionAbrirArchivo.accept(archivo);
                     }
                 }
             });
@@ -404,20 +424,58 @@ public class ExploradorPanel extends JPanel {
 
     private DefaultMutableTreeNode crearNodo(File archivo) {
         DefaultMutableTreeNode nodo = new DefaultMutableTreeNode(archivo);
+        if (!archivo.isDirectory()) {
+            return nodo;
+        }
+        File[] archivos = archivo.listFiles();
+        if (archivos == null) {
+            return nodo;
+        }
+        ordenarArchivos(archivos);
+        for (File hijo : archivos) {
+            if (!debeMostrarArchivo(archivo, hijo)) {
+                continue;
+            }
 
-        if (archivo.isDirectory()) {
-            File[] archivos = archivo.listFiles();
+            nodo.add(crearNodo(hijo));
+        }
+        return nodo;
+    }
+    
+    private boolean debeMostrarArchivo(File padre, File hijo) {
+        if (!Sesion.esAdministrador()) {
+            return true;
+        }
 
-            if (archivos != null) {
-                ordenarArchivos(archivos);
+        try {
+            File raizSistema = RutasSistema.getRaizSistema().getCanonicalFile();
+            File padreCanonico = padre.getCanonicalFile();
 
-                for (File hijo : archivos) {
-                    nodo.add(crearNodo(hijo));
-                }
+            if (!padreCanonico.equals(raizSistema)) {
+                return true;
+            }
+
+            if (!hijo.isDirectory()) {
+                return true;
+            }
+
+            return usuarioRegistrado(hijo.getName());
+
+        } catch (IOException e) {
+            return true;
+        }
+    }
+    
+    private boolean usuarioRegistrado(String username) {
+        GestorUsuarios gestorUsuarios = new GestorUsuarios();
+
+        for (UsuarioSistema usuario : gestorUsuarios.getUsuarios()) {
+            if (usuario.getUsername().equalsIgnoreCase(username)) {
+                return true;
             }
         }
 
-        return nodo;
+        return false;
     }
 
     private File obtenerSeleccionado() {
@@ -845,5 +903,10 @@ public class ExploradorPanel extends JPanel {
         if(accionCerrar != null){
             accionCerrar.run();
         }
+    }
+    
+    public void actualizarExplorador() {
+        crearRaizUsuario();
+        cargarArbol();
     }
 }

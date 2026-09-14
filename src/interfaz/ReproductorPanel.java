@@ -397,13 +397,23 @@ public class ReproductorPanel extends JPanel {
         hiloReproductor.start();
     }
 
-    public void cerrarReproductor() {
+    public void detenerReproductor() {
         if (hiloReproductor != null) {
             hiloReproductor.detenerHilo();
             hiloReproductor = null;
         }
-        reproductor.cerrar();
-        if (accionCerrar != null) accionCerrar.run();
+
+        if (reproductor != null) {
+            reproductor.cerrar();
+        }
+    }
+
+    public void cerrarReproductor() {
+        detenerReproductor();
+
+        if (accionCerrar != null) {
+            accionCerrar.run();
+        }
     }
 
     private void mostrarInformacionCancion(File archivo) {

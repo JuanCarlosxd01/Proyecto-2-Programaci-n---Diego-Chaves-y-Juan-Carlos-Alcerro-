@@ -558,45 +558,76 @@ public class InstaPanel extends JPanel {
 
     private void iniciarNotificaciones() {
         cerrarNotificaciones();
+
         mensajesPendientes = 0;
         mencionesPendientes = 0;
+
         actualizarContadoresNotificacion();
+
         hiloNotificaciones = new HiloNotificaciones(
                 cliente,
                 nuevos -> SwingUtilities.invokeLater(() -> mostrarNotificacionMensajes(nuevos)),
                 nuevas -> SwingUtilities.invokeLater(() -> mostrarNotificacionMenciones(nuevas)),
                 error -> {
-                    if (cliente.tieneSesion()) System.err.println("Notificaciones INSTA+: " + error.getMessage());
+                    if (cliente.tieneSesion()) {
+                        System.err.println("Notificaciones INSTA+: " + error.getMessage());
+                    }
                 }
         );
+
         hiloNotificaciones.iniciar();
     }
 
     private void mostrarNotificacionMensajes(ListaEnlazada<Mensaje> nuevos) {
-        if (nuevos == null || nuevos.isEmpty()) return;
-        mensajesPendientes += nuevos.size();
-        actualizarContadoresNotificacion();
-        Mensaje ultimo = nuevos.obtener(nuevos.size() - 1);
-        lblNotificacion.setText("✉ Nuevo mensaje de @" + ultimo.getEmisor());
-        inboxPanel.refrescarEnTiempoReal(nuevos);
-        if (!inboxPanel.isShowing()) {
-            mostrarPopupMensaje(ultimo);
+        if (nuevos == null || nuevos.isEmpty()) {
+            return;
         }
+
+        mensajesPendientes += nuevos.size();
+
+        actualizarContadoresNotificacion();
+
+        Mensaje ultimo = null;
+
+        for (Mensaje mensaje : nuevos) {
+            ultimo = mensaje;
+        }
+
+        if (ultimo == null) {
+            return;
+        }
+
+        lblNotificacion.setText("✉ Nuevo mensaje de @" + ultimo.getEmisor());
+
         ocultarAvisoLuego();
+
+        mostrarPopupMensaje(ultimo);
     }
 
     private void mostrarNotificacionMenciones(ListaEnlazada<insta.modelo.Publicacion> nuevas) {
-        if (nuevas == null || nuevas.isEmpty()) return;
-        mencionesPendientes += nuevas.size();
-        actualizarContadoresNotificacion();
-        insta.modelo.Publicacion ultima = nuevas.obtener(nuevas.size() - 1);
-        lblNotificacion.setText("@ Te mencionó @" + ultima.getAutor());
-        if (interaccionesPanel.isShowing()) {
-            interaccionesPanel.cargarMenciones();
-        } else {
-            mostrarPopupMencion(ultima);
+        if (nuevas == null || nuevas.isEmpty()) {
+            return;
         }
+
+        mencionesPendientes += nuevas.size();
+
+        actualizarContadoresNotificacion();
+
+        insta.modelo.Publicacion ultima = null;
+
+        for (insta.modelo.Publicacion publicacion : nuevas) {
+            ultima = publicacion;
+        }
+
+        if (ultima == null) {
+            return;
+        }
+
+        lblNotificacion.setText("@ Te mencionó @" + ultima.getAutor());
+
         ocultarAvisoLuego();
+
+        mostrarPopupMencion(ultima);
     }
 
     private void mostrarPopupMensaje(Mensaje mensaje) {
@@ -610,13 +641,184 @@ public class InstaPanel extends JPanel {
     }
 
     private void mostrarPopupMencion(insta.modelo.Publicacion publicacion) {
-        String contenido = publicacion.getContenido();
-        mostrarPopupNotificacion("Nueva mención", publicacion.getAutor(), contenido, () -> {
+        mostrarPopupPublicacion(publicacion, () -> {
             mencionesPendientes = 0;
+
             actualizarContadoresNotificacion();
+
             interaccionesPanel.cargarMenciones();
+
             mostrarPanel("INTERACCIONES");
         });
+    }
+    
+    private void mostrarPopupPublicacion(insta.modelo.Publicacion publicacion, Runnable accion) {
+        ocultarPopupNotificacion();
+
+        if (!isShowing() || publicacion == null) {
+            return;
+        }
+
+        int ancho = 390;
+
+        JPanel tarjeta = new JPanel(new BorderLayout(10, 10));
+
+        tarjeta.setPreferredSize(new Dimension(ancho, publicacion.tieneAdjunto() ? 330 : 145));
+
+        tarjeta.setBackground(TemaInsta.TARJETA);
+
+        tarjeta.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(TemaInsta.BORDE),
+                new EmptyBorder(12, 14, 12, 14)
+        ));
+
+        tarjeta.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        JPanel encabezado = new JPanel(new BorderLayout(10, 0));
+        encabezado.setOpaque(false);
+
+        String inicial = publicacion.getAutor() == null || publicacion.getAutor().isBlank() ? "?" : publicacion.getAutor().substring(0, 1).toUpperCase();
+
+        JLabel avatar = new JLabel(inicial, SwingConstants.CENTER);
+
+        avatar.setPreferredSize(new Dimension(46, 46));
+        avatar.setOpaque(true);
+        avatar.setBackground(TemaInsta.INPUT);
+        avatar.setForeground(TemaInsta.TEXTO);
+        avatar.setFont(new Font("Arial", Font.BOLD, 15));
+        avatar.setBorder(BorderFactory.createLineBorder(TemaInsta.BORDE));
+
+        JPanel datos = new JPanel();
+
+        datos.setOpaque(false);
+        datos.setLayout(new BoxLayout(datos, BoxLayout.Y_AXIS));
+
+        JLabel lblTitulo = new JLabel("Nueva mención · @" + publicacion.getAutor());
+
+        lblTitulo.setForeground(TemaInsta.TEXTO);
+        lblTitulo.setFont(new Font("Arial", Font.BOLD, 13));
+
+        JLabel lblFecha = new JLabel(publicacion.getFechaPublicacion().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+
+        lblFecha.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+        lblFecha.setFont(new Font("Arial", Font.PLAIN, 11));
+
+        datos.add(lblTitulo);
+        datos.add(Box.createVerticalStrut(3));
+        datos.add(lblFecha);
+
+        encabezado.add(avatar, BorderLayout.WEST);
+        encabezado.add(datos, BorderLayout.CENTER);
+
+        tarjeta.add(encabezado, BorderLayout.NORTH);
+
+        JPanel cuerpo = new JPanel();
+
+        cuerpo.setOpaque(false);
+        cuerpo.setLayout(new BoxLayout(cuerpo, BoxLayout.Y_AXIS));
+
+        if (publicacion.tieneAdjunto()) {
+            int anchoImagen;
+            int altoImagen;
+
+            if (publicacion.esSticker()) {
+                anchoImagen = 130;
+                altoImagen = 130;
+            } else {
+                anchoImagen = 330;
+                altoImagen = 180;
+            }
+
+            JLabel imagen = new JLabel(publicacion.esSticker() ? "Cargando sticker..." : "Cargando imagen...", SwingConstants.CENTER);
+
+            imagen.setAlignmentX(Component.CENTER_ALIGNMENT);
+            imagen.setPreferredSize(new Dimension(anchoImagen, altoImagen));
+            imagen.setMaximumSize(new Dimension(anchoImagen, altoImagen));
+            imagen.setMinimumSize(new Dimension(anchoImagen, altoImagen));
+            imagen.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+
+            cuerpo.add(imagen);
+
+            cargarAdjuntoPopup(publicacion.getRutaAdjunto(), imagen, anchoImagen, altoImagen);
+
+            if (publicacion.getContenido() != null && !publicacion.getContenido().isBlank()) {
+                cuerpo.add(Box.createVerticalStrut(6));
+            }
+        }
+
+        if (publicacion.getContenido() != null && !publicacion.getContenido().isBlank()) {
+            JLabel texto = new JLabel("<html><div style='width:340px;'>" + TarjetaPublicacionPanel.escaparHtml(recortar(publicacion.getContenido(), 180)) + "</div></html>");
+
+            texto.setForeground(TemaInsta.TEXTO);
+            texto.setFont(new Font("Arial", Font.PLAIN, 12));
+            texto.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            cuerpo.add(texto);
+        }
+
+        tarjeta.add(cuerpo, BorderLayout.CENTER);
+
+        agregarAccionClick(tarjeta, accion);
+
+        cargarAvatarPopup(publicacion.getAutor(), avatar);
+
+        try {
+            Point ubicacion = getLocationOnScreen();
+
+            int x = ubicacion.x + getWidth() - ancho - 24;
+            int y = ubicacion.y + 82;
+
+            popupNotificacion = PopupFactory.getSharedInstance().getPopup(this, tarjeta, x, y);
+
+            popupNotificacion.show();
+
+            timerPopupNotificacion = new Timer(8000, e -> ocultarPopupNotificacion());
+
+            timerPopupNotificacion.setRepeats(false);
+
+            timerPopupNotificacion.start();
+
+        } catch (IllegalComponentStateException ignored) {
+        }
+    }
+    
+    private void cargarAdjuntoPopup(String ruta, JLabel destino, int ancho, int alto) {
+        if (ruta == null || ruta.isBlank()) {
+            return;
+        }
+
+        SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
+
+            @Override
+            protected ImageIcon doInBackground() throws Exception {
+                Respuesta respuesta = cliente.descargarImagen(ruta);
+
+                if (!respuesta.esExitosa() || respuesta.getArchivo() == null) {
+                    return null;
+                }
+
+                return ImagenUI.ajustar(respuesta.getArchivo(), ancho, alto);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    ImageIcon icono = get();
+
+                    if (icono != null) {
+                        destino.setText("");
+                        destino.setIcon(icono);
+                    } else {
+                        destino.setText("No se pudo cargar la imagen");
+                    }
+
+                } catch (Exception e) {
+                    destino.setText("No se pudo cargar la imagen");
+                }
+            }
+        };
+
+        worker.execute();
     }
 
     private void mostrarPopupNotificacion(String titulo, String username, String detalle, Runnable accion) {
@@ -731,8 +933,23 @@ public class InstaPanel extends JPanel {
     }
 
     private void actualizarContadoresNotificacion() {
-        btnInbox.setText(mensajesPendientes > 0 ? "✉   Mensajes (" + mensajesPendientes + ")" : "✉   Mensajes");
-        btnInteracciones.setText(mencionesPendientes > 0 ? "♡   Notificaciones (" + mencionesPendientes + ")" : "♡   Notificaciones");
+        if (mensajesPendientes > 0) {
+            btnInbox.setText("✉   Mensajes (" + mensajesPendientes + ")");
+        } else {
+            btnInbox.setText("✉   Mensajes");
+        }
+
+        if (mencionesPendientes > 0) {
+            btnInteracciones.setText("♡   Notificaciones (" + mencionesPendientes + ")");
+        } else {
+            btnInteracciones.setText("♡   Notificaciones");
+        }
+
+        btnInbox.revalidate();
+        btnInbox.repaint();
+
+        btnInteracciones.revalidate();
+        btnInteracciones.repaint();
     }
 
     private void ocultarAvisoLuego() {

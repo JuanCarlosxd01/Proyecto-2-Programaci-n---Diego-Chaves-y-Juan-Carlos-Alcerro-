@@ -49,7 +49,13 @@ public final class RutasSistema {
             return null;
         }
 
-        return new File(carpetaUsuario, NOMBRE_DOCUMENTOS);
+        File documentos = new File(carpetaUsuario, NOMBRE_DOCUMENTOS);
+
+        if (!documentos.exists()) {
+            documentos.mkdirs();
+        }
+
+        return documentos;
     }
 
     public static File getMusicaUsuarioActual() {
@@ -59,7 +65,13 @@ public final class RutasSistema {
             return null;
         }
 
-        return new File(carpetaUsuario, NOMBRE_MUSICA);
+        File musica = new File(carpetaUsuario, NOMBRE_MUSICA);
+
+        if (!musica.exists()) {
+            musica.mkdirs();
+        }
+
+        return musica;
     }
 
     public static File getImagenesUsuarioActual() {
@@ -69,7 +81,13 @@ public final class RutasSistema {
             return null;
         }
 
-        return new File(carpetaUsuario, NOMBRE_IMAGENES);
+        File imagenes = new File(carpetaUsuario, NOMBRE_IMAGENES);
+
+        if (!imagenes.exists()) {
+            imagenes.mkdirs();
+        }
+
+        return imagenes;
     }
 
     public static File getDocumentos(UsuarioSistema usuario) {
@@ -133,11 +151,9 @@ public final class RutasSistema {
             carpetaUsuario.mkdirs();
         }
 
-        normalizarCarpetasPrincipales(carpetaUsuario);
-
-        File documentos = getDocumentos(usuario);
-        File musica = getMusica(usuario);
-        File imagenes = getImagenes(usuario);
+        File documentos = new File(carpetaUsuario, "Mis Documentos");
+        File musica = new File(carpetaUsuario, "Música");
+        File imagenes = new File(carpetaUsuario, "Mis Imágenes");
 
         if (!documentos.exists()) {
             documentos.mkdirs();

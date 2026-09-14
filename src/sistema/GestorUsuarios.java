@@ -1,6 +1,6 @@
-
 package sistema;
 
+import java.io.File;
 import java.util.ArrayList;
 import modelo.ConfiguracionSistema;
 import modelo.TipoUsuario;
@@ -18,8 +18,10 @@ public class GestorUsuarios {
         usuarios = gestorBinario.cargarUsuarios();
 
         if (usuarios == null) {
-            System.err.println("No se pudieron cargar los usuarios guardados. Se intentará recuperar el sistema.");
+            System.err.println("No se pudieron cargar los usuarios guardados.");
+
             gestorBinario.respaldarArchivoCorrupto();
+
             usuarios = new ArrayList<>();
         }
 
@@ -37,7 +39,11 @@ public class GestorUsuarios {
             return;
         }
 
-        UsuarioSistema admin = new UsuarioSistema(ConfiguracionSistema.ADMIN_USUARIO, ConfiguracionSistema.ADMIN_CONTRASENA, TipoUsuario.ADMINISTRADOR);
+        UsuarioSistema admin = new UsuarioSistema(
+                ConfiguracionSistema.ADMIN_USUARIO,
+                ConfiguracionSistema.ADMIN_CONTRASENA,
+                TipoUsuario.ADMINISTRADOR
+        );
 
         usuarios.add(admin);
 
@@ -81,7 +87,11 @@ public class GestorUsuarios {
 
         username = username.trim();
 
-        if (username.isEmpty() || !UsuarioSistema.contrasenaValida(contrasena)) {
+        if (username.isEmpty()) {
+            return false;
+        }
+
+        if (!UsuarioSistema.contrasenaValida(contrasena)) {
             return false;
         }
 
@@ -89,15 +99,77 @@ public class GestorUsuarios {
             return false;
         }
 
-        UsuarioSistema nuevo = new UsuarioSistema(username, contrasena, TipoUsuario.ESTANDAR);
+        UsuarioSistema nuevo = new UsuarioSistema(
+                username,
+                contrasena,
+                TipoUsuario.ESTANDAR
+        );
 
         usuarios.add(nuevo);
 
         crearCarpetasUsuario(nuevo);
 
-        gestorBinario.guardarUsuarios(usuarios);
+        if (!gestorBinario.guardarUsuarios(usuarios)) {
+            usuarios.remove(nuevo);
+
+            return false;
+        }
 
         return true;
+    }
+
+    public boolean eliminarUsuario(String username) {
+        if (!Sesion.esAdministrador()) {
+            return false;
+        }
+
+        if (username == null || username.isBlank()) {
+            return false;
+        }
+
+        UsuarioSistema usuario = buscarUsuario(username);
+
+        if (usuario == null) {
+            return false;
+        }
+
+        if (usuario.esAdministrador()) {
+            return false;
+        }
+
+        usuarios.remove(usuario);
+
+        if (!gestorBinario.guardarUsuarios(usuarios)) {
+            usuarios.add(usuario);
+
+            return false;
+        }
+
+       File carpetaUsuario = new File("Z", usuario.getUsername());
+
+        eliminarRecursivamente(carpetaUsuario);
+
+        return true;
+    }
+
+    private boolean eliminarRecursivamente(File archivo) {
+        if (archivo == null || !archivo.exists()) {
+            return true;
+        }
+
+        if (archivo.isDirectory()) {
+            File[] hijos = archivo.listFiles();
+
+            if (hijos != null) {
+                for (File hijo : hijos) {
+                    if (!eliminarRecursivamente(hijo)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return archivo.delete();
     }
 
     public UsuarioSistema buscarUsuario(String username) {

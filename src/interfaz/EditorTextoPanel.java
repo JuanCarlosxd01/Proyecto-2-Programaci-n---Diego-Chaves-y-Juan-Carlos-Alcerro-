@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import java.io.File;
 
 public class EditorTextoPanel extends JPanel {
     private JTextPane areaTexto;
@@ -21,6 +22,7 @@ public class EditorTextoPanel extends JPanel {
     private JMenuItem itemGuardarComo;
     private JPanel panelSuperior;
     private Runnable accionCerrar;
+    private ControladorEditor controlador;
 
     private static final Color AZUL_WORD = new Color(43, 87, 154);
     private static final Color HOVER = new Color(225, 235, 247);
@@ -36,7 +38,13 @@ public class EditorTextoPanel extends JPanel {
         crearBarraHerramientas();
         crearAreaTexto();
         add(panelSuperior, BorderLayout.NORTH);
-        new ControladorEditor(this);
+        controlador = new ControladorEditor(this);
+    }
+    
+    public void abrirArchivo(File archivo) {
+        if (controlador != null) {
+            controlador.abrirArchivo(archivo);
+        }
     }
 
     private void crearMenu() {

@@ -1,16 +1,15 @@
-
 package insta.interfaz;
 
 import estructuras.ListaEnlazada;
 import insta.modelo.Publicacion;
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import red.Cliente;
-import red.Respuesta;
 
 public class InteraccionesPanel extends JPanel implements Tematizable {
+
+    private static final int ANCHO_PUBLICACION = 620;
 
     private JPanel panelEncabezado;
     private JPanel panelInteracciones;
@@ -65,6 +64,8 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
 
         JLabel cargando = new JLabel("Cargando menciones...");
         cargando.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        panelInteracciones.add(Box.createVerticalStrut(20));
         panelInteracciones.add(cargando);
 
         panelInteracciones.revalidate();
@@ -84,7 +85,7 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
                 try {
                     ListaEnlazada<Publicacion> publicaciones = get();
 
-                    if (publicaciones.isEmpty()) {
+                    if (publicaciones == null || publicaciones.isEmpty()) {
                         mostrarMensaje("Todavía nadie te ha mencionado.");
                         return;
                     }
@@ -98,6 +99,7 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
                 }
 
                 aplicarTema();
+
                 panelInteracciones.revalidate();
                 panelInteracciones.repaint();
             }
@@ -108,12 +110,29 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
 
     private void agregarPublicacion(Publicacion publicacion) {
         TarjetaPublicacionPanel tarjeta = new TarjetaPublicacionPanel(cliente, publicacion, this::cargarMenciones);
-        panelInteracciones.add(tarjeta);
+
+        Dimension preferido = tarjeta.getPreferredSize();
+
+        int alto = Math.max(preferido.height, 200);
+
+        tarjeta.setPreferredSize(new Dimension(ANCHO_PUBLICACION, alto));
+        tarjeta.setMaximumSize(new Dimension(ANCHO_PUBLICACION, alto));
+        tarjeta.setMinimumSize(new Dimension(ANCHO_PUBLICACION, alto));
+
+        JPanel contenedorTarjeta = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        contenedorTarjeta.setOpaque(false);
+        contenedorTarjeta.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contenedorTarjeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, alto));
+
+        contenedorTarjeta.add(tarjeta);
+
+        panelInteracciones.add(contenedorTarjeta);
         panelInteracciones.add(Box.createVerticalStrut(15));
     }
 
     private void mostrarMensaje(String texto) {
         JLabel mensaje = new JLabel(texto);
+
         mensaje.setAlignmentX(Component.CENTER_ALIGNMENT);
         mensaje.setForeground(TemaInsta.TEXTO);
 
@@ -127,6 +146,7 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
     @Override
     public void aplicarTema() {
         setBackground(TemaInsta.FONDO);
+
         panelEncabezado.setBackground(TemaInsta.FONDO);
         panelInteracciones.setBackground(TemaInsta.FONDO_SECUNDARIO);
 
@@ -143,6 +163,7 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
 
     private void cambiarTexto(Container contenedor) {
         for (Component componente : contenedor.getComponents()) {
+
             if (componente instanceof JLabel label) {
                 label.setForeground(TemaInsta.TEXTO);
             }

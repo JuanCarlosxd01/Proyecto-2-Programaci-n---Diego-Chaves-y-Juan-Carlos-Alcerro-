@@ -16,71 +16,68 @@ import modelo.UsuarioSistema;
 
 public class GestorUsuariosBinario {
 
-    private static final String ARCHIVO_PRINCIPAL = "usuarios.sop";
-    private static final String ARCHIVO_LEGACY = "usuarios.dat";
+    private static final String ARCHIVO_USUARIOS = "usuarios.sop";
 
     public boolean guardarUsuarios(ArrayList<UsuarioSistema> usuarios) {
         if (usuarios == null) {
             return false;
         }
 
-        File destino = new File(ARCHIVO_PRINCIPAL);
-        File temporal = new File(ARCHIVO_PRINCIPAL + ".tmp");
+        File destino = new File(ARCHIVO_USUARIOS);
+        File temporal = new File(ARCHIVO_USUARIOS + ".tmp");
 
-        try (FileOutputStream archivo = new FileOutputStream(temporal); ObjectOutputStream salida = new ObjectOutputStream(archivo)) {
+        try (FileOutputStream archivo = new FileOutputStream(temporal);
+             ObjectOutputStream salida = new ObjectOutputStream(archivo)) {
+
             salida.writeObject(usuarios);
             salida.flush();
+
             archivo.getFD().sync();
+
         } catch (IOException e) {
             temporal.delete();
+
             System.err.println("Error al guardar los usuarios: " + e.getMessage());
+
             return false;
         }
 
         try {
             try {
-                Files.move(temporal.toPath(), destino.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+                Files.move(
+                        temporal.toPath(),
+                        destino.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+
             } catch (AtomicMoveNotSupportedException e) {
-                Files.move(temporal.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                Files.move(
+                        temporal.toPath(),
+                        destino.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING
+                );
             }
+
             return true;
+
         } catch (IOException e) {
             temporal.delete();
-            System.err.println("No se pudo reemplazar " + ARCHIVO_PRINCIPAL + ": " + e.getMessage());
+
+            System.err.println("No se pudo reemplazar " + ARCHIVO_USUARIOS + ": " + e.getMessage());
+
             return false;
         }
     }
 
     public ArrayList<UsuarioSistema> cargarUsuarios() {
-        File archivo = localizarArchivo();
+        File archivo = new File(ARCHIVO_USUARIOS);
 
-        if (archivo == null) {
+        if (!archivo.exists()) {
             return new ArrayList<>();
         }
 
-        ArrayList<UsuarioSistema> usuarios = leerUsuarios(archivo);
-
-        if (usuarios != null && archivo.getName().equals(ARCHIVO_LEGACY)) {
-            if (guardarUsuarios(usuarios)) {
-                System.out.println("Usuarios migrados de " + ARCHIVO_LEGACY + " a " + ARCHIVO_PRINCIPAL + ".");
-            }
-        }
-
-        return usuarios;
-    }
-
-    private File localizarArchivo() {
-        File principal = new File(ARCHIVO_PRINCIPAL);
-        if (principal.exists()) {
-            return principal;
-        }
-
-        File legacy = new File(ARCHIVO_LEGACY);
-        if (legacy.exists()) {
-            return legacy;
-        }
-
-        return null;
+        return leerUsuarios(archivo);
     }
 
     private ArrayList<UsuarioSistema> leerUsuarios(File archivo) {
@@ -90,6 +87,7 @@ public class GestorUsuariosBinario {
         }
 
         try (ObjectInputStream entrada = new ObjectInputStream(new FileInputStream(archivo))) {
+
             Object objeto = entrada.readObject();
 
             if (!(objeto instanceof ArrayList<?> lista)) {
@@ -101,47 +99,63 @@ public class GestorUsuariosBinario {
 
             for (Object elemento : lista) {
                 if (!(elemento instanceof UsuarioSistema usuario)) {
-                    System.err.println("El archivo " + archivo.getName() + " contiene información inválida.");
+                    System.err.println("El archivo contiene información de usuarios inválida.");
                     return null;
                 }
+
                 usuarios.add(usuario);
             }
 
             return usuarios;
+
         } catch (InvalidClassException e) {
-            System.err.println("El archivo " + archivo.getName() + " pertenece a una versión incompatible: " + e.getMessage());
+            System.err.println("El archivo de usuarios pertenece a una versión incompatible: " + e.getMessage());
             return null;
+
         } catch (EOFException e) {
-            System.err.println("El archivo " + archivo.getName() + " está incompleto o corrupto.");
+            System.err.println("El archivo de usuarios está incompleto o corrupto.");
             return null;
+
         } catch (ClassNotFoundException e) {
             System.err.println("No se pudo reconocer la información guardada de usuarios.");
             return null;
+
         } catch (IOException e) {
-            System.err.println("No se pudo leer " + archivo.getName() + ": " + e.getMessage());
+            System.err.println("No se pudo leer " + ARCHIVO_USUARIOS + ": " + e.getMessage());
             return null;
         }
     }
 
     public boolean respaldarArchivoCorrupto() {
-        File archivo = localizarArchivo();
-        if (archivo == null) {
+        File archivo = new File(ARCHIVO_USUARIOS);
+
+        if (!archivo.exists()) {
             return true;
         }
 
-        File respaldo = new File(archivo.getName() + ".corrupto-" + System.currentTimeMillis());
+        File respaldo = new File(ARCHIVO_USUARIOS + ".corrupto-" + System.currentTimeMillis());
+
         try {
-            Files.move(archivo.toPath(), respaldo.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.err.println("Se respaldó el archivo de usuarios dañado como: " + respaldo.getName());
+            Files.move(
+                    archivo.toPath(),
+                    respaldo.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
+            System.err.println("Archivo dañado respaldado como: " + respaldo.getName());
+
             return true;
+
         } catch (IOException e) {
             System.err.println("No se pudo respaldar el archivo de usuarios dañado: " + e.getMessage());
+
             return false;
         }
     }
 
     public boolean existeArchivoUsuarios() {
-        File archivo = localizarArchivo();
-        return archivo != null && archivo.isFile();
+        File archivo = new File(ARCHIVO_USUARIOS);
+
+        return archivo.exists() && archivo.isFile();
     }
 }

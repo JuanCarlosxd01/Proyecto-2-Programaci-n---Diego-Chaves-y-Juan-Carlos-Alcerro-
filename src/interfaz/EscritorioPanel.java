@@ -217,32 +217,134 @@ public class EscritorioPanel extends JPanel {
     }
 
     private void abrirArchivoDesdeExplorador(File archivo) {
-        if (archivo == null || !archivo.isFile()) return;
-        String nombre = archivo.getName().toLowerCase();
-        if (nombre.endsWith(".mp3") || nombre.endsWith(".wav") || nombre.endsWith(".au") || nombre.endsWith(".aiff") || nombre.endsWith(".aif")) {
-            JInternalFrame ventana = new JInternalFrame("Música - " + archivo.getName(), true, true, true, true);
-            ventana.setFrameIcon(IconosWindows.crear("musica", 16));
-            ventana.setSize(tamanoPredeterminado("Música"));
-            ubicarVentanaCentrada(ventana);
-            ReproductorPanel musica = new ReproductorPanel();
-            musica.setAccionCerrar(ventana::dispose);
-            ventana.add(musica);
-            ventana.addInternalFrameListener(new InternalFrameAdapter() {
-                @Override
-                public void internalFrameClosing(InternalFrameEvent e) {
-                    musica.cerrarReproductor();
-                }
-            });
-            escritorio.add(ventana, JLayeredPane.PALETTE_LAYER);
-            crearBotonBarraTareas(ventana, "Música");
-            activarAjusteVentana(ventana);
-            ventana.setVisible(true);
-            musica.reproducirArchivo(archivo);
-            try { ventana.setSelected(true); } catch (java.beans.PropertyVetoException ignored) { }
+        if (archivo == null || !archivo.exists() || archivo.isDirectory()) {
             return;
         }
-        DialogosWindows.showMessageDialog(this, "Doble clic abre directamente los archivos de audio en el reproductor.\nPara otros archivos use su aplicación correspondiente.", "Abrir archivo", JOptionPane.INFORMATION_MESSAGE);
+
+        String nombre = archivo.getName().toLowerCase();
+
+        if (nombre.endsWith(".txt") || nombre.endsWith(".edt")) {
+            abrirEditorConArchivo(archivo);
+            return;
+        }
+
+        if (nombre.endsWith(".png") || nombre.endsWith(".jpg") || nombre.endsWith(".jpeg") || nombre.endsWith(".gif") || nombre.endsWith(".bmp")) {
+            abrirVisorConArchivo(archivo);
+            return;
+        }
+
+        if (nombre.endsWith(".wav") || nombre.endsWith(".mp3") || nombre.endsWith(".au") || nombre.endsWith(".aiff") || nombre.endsWith(".aif")) {
+            abrirReproductorConArchivo(archivo);
+            return;
+        }
+
+        DialogosWindows.showMessageDialog(this, "No hay una aplicación asociada para este tipo de archivo.", "Abrir archivo", JOptionPane.INFORMATION_MESSAGE);
     }
+    
+    private void abrirEditorConArchivo(File archivo) {
+        JInternalFrame ventana = new JInternalFrame("Word - " + archivo.getName(), true, true, true, true);
+
+        ventana.setFrameIcon(IconosWindows.crear("word", 16));
+        ventana.setSize(800, 600);
+        ubicarVentanaCentrada(ventana);
+
+        EditorTextoPanel editor = new EditorTextoPanel();
+
+        editor.setAccionCerrar(() -> {
+            ventana.dispose();
+        });
+
+        ventana.add(editor);
+
+        escritorio.add(ventana, JLayeredPane.PALETTE_LAYER);
+
+        crearBotonBarraTareas(ventana, "Word");
+        activarAjusteVentana(ventana);
+
+        ventana.setVisible(true);
+
+        editor.abrirArchivo(archivo);
+
+        try {
+            ventana.setSelected(true);
+        } catch (java.beans.PropertyVetoException ignored) {
+        }
+    }
+    
+    private void abrirVisorConArchivo(File archivo) {
+        JInternalFrame ventana = new JInternalFrame("Imágenes - " + archivo.getName(), true, true, true, true);
+
+        ventana.setFrameIcon(IconosWindows.crear("imagenes", 16));
+        ventana.setSize(980, 650);
+        ubicarVentanaCentrada(ventana);
+
+        VisorImagenPanel visor = new VisorImagenPanel(archivo.getParentFile());
+
+        visor.setAccionCerrar(() -> {
+            ventana.dispose();
+        });
+
+        ventana.add(visor);
+
+        escritorio.add(ventana, JLayeredPane.PALETTE_LAYER);
+
+        crearBotonBarraTareas(ventana, "Imágenes");
+        activarAjusteVentana(ventana);
+
+        ventana.setVisible(true);
+
+        visor.seleccionarImagen(archivo);
+
+        try {
+            ventana.setSelected(true);
+        } catch (java.beans.PropertyVetoException ignored) {
+        }
+    }
+    
+    private void abrirReproductorConArchivo(File archivo) {
+        JInternalFrame ventana = new JInternalFrame("Música - " + archivo.getName(), true, true, true, true);
+
+        ventana.setFrameIcon(IconosWindows.crear("musica", 16));
+        ventana.setSize(1000, 650);
+        ubicarVentanaCentrada(ventana);
+
+        ReproductorPanel musica = new ReproductorPanel();
+
+        musica.setAccionCerrar(() -> {
+            ventana.dispose();
+        });
+
+        ventana.setDefaultCloseOperation(JInternalFrame.DISPOSE_ON_CLOSE);
+
+        ventana.addInternalFrameListener(new InternalFrameAdapter() {
+            @Override
+            public void internalFrameClosing(InternalFrameEvent e) {
+                musica.detenerReproductor();
+            }
+
+            @Override
+            public void internalFrameClosed(InternalFrameEvent e) {
+                musica.detenerReproductor();
+            }
+        });
+
+        ventana.add(musica);
+
+        escritorio.add(ventana, JLayeredPane.PALETTE_LAYER);
+
+        crearBotonBarraTareas(ventana, "Música");
+        activarAjusteVentana(ventana);
+
+        ventana.setVisible(true);
+
+        musica.reproducirArchivo(archivo);
+
+        try {
+            ventana.setSelected(true);
+        } catch (java.beans.PropertyVetoException ignored) {
+        }
+    }
+
 
     private void abrirVentana(String nombre){
         JInternalFrame ventana = new JInternalFrame(nombre, true, true, true, true);
@@ -269,17 +371,26 @@ public class EscritorioPanel extends JPanel {
         }
         else if(nombre.equals("Música")){
             ReproductorPanel musica = new ReproductorPanel();
-            musica.setAccionCerrar(() ->{
+
+            musica.setAccionCerrar(() -> {
                 ventana.dispose();
             });
-            ventana.add(musica);
-            
+
+            ventana.setDefaultCloseOperation(JInternalFrame.DISPOSE_ON_CLOSE);
+
             ventana.addInternalFrameListener(new InternalFrameAdapter() {
                 @Override
-                public void internalFrameClosing(InternalFrameEvent e){
-                    musica.cerrarReproductor();
+                public void internalFrameClosing(InternalFrameEvent e) {
+                    musica.detenerReproductor();
+                }
+
+                @Override
+                public void internalFrameClosed(InternalFrameEvent e) {
+                    musica.detenerReproductor();
                 }
             });
+
+            ventana.add(musica);
         }
         else if(nombre.equals("Pokémon")){
             VentanaPokemon pokemon = new VentanaPokemon();
@@ -305,6 +416,7 @@ public class EscritorioPanel extends JPanel {
         }
         else if(nombre.equals("Equipo") || nombre.equals("Archivos")){
             ExploradorPanel explorador = new ExploradorPanel();
+            explorador.actualizarExplorador();
             explorador.setAccionCerrar(() -> {
                 ventana.dispose();
             });
@@ -325,7 +437,7 @@ public class EscritorioPanel extends JPanel {
 
                 @Override
                 public void restaurarFondo() {
-                    restaurarFondo();
+                    EscritorioPanel.this.restaurarFondo();;
                 }
             });
             ventana.add(config);
@@ -846,21 +958,56 @@ public class EscritorioPanel extends JPanel {
     }
 
     private void aplicarFondoImagen(File archivo) {
-        if (archivo == null || !(escritorio instanceof EscritorioWindowsPane pane)) return;
+        if (archivo == null || !(escritorio instanceof EscritorioWindowsPane pane)) {
+            return;
+        }
+
         try {
             File carpetaImagenes = RutasSistema.getImagenesUsuarioActual();
-            if (carpetaImagenes == null) return;
-            if (!carpetaImagenes.exists()) carpetaImagenes.mkdirs();
-            String ext = archivo.getName().contains(".") ? archivo.getName().substring(archivo.getName().lastIndexOf('.')) : ".jpg";
-            File copia = new File(carpetaImagenes, "FondoEscritorio" + ext);
-            Files.copy(archivo.toPath(), copia.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            if (carpetaImagenes == null) {
+                return;
+            }
+
+            if (!carpetaImagenes.exists()) {
+                carpetaImagenes.mkdirs();
+            }
+
+            String ext = archivo.getName().contains(".")
+                    ? archivo.getName().substring(archivo.getName().lastIndexOf('.'))
+                    : ".jpg";
+
+            String nombreFondo = "FondoEscritorio_" + System.currentTimeMillis() + ext;
+
+            File copia = new File(carpetaImagenes, nombreFondo);
+
+            Files.copy(
+                    archivo.toPath(),
+                    copia.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
             Properties props = new Properties();
             props.setProperty("tipo", "imagen");
             props.setProperty("ruta", copia.getAbsolutePath());
+
             guardarPropiedadesFondo(props);
+
             pane.setFondoArchivo(copia);
+
+            pane.revalidate();
+            pane.repaint();
+
+            escritorio.revalidate();
+            escritorio.repaint();
+
         } catch (Exception ex) {
-            DialogosWindows.showMessageDialog(this, "No se pudo establecer el fondo: " + ex.getMessage(), "Personalización", JOptionPane.ERROR_MESSAGE);
+            DialogosWindows.showMessageDialog(
+                    this,
+                    "No se pudo establecer el fondo: " + ex.getMessage(),
+                    "Personalización",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
