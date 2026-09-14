@@ -8,6 +8,7 @@ import insta.modelo.Sticker;
 import estructuras.ListaEnlazada;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -40,7 +41,7 @@ import red.Respuesta;
 public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
 
     private final Cliente cliente;
-    private final Publicacion publicacion;
+    private Publicacion publicacion;
     private final Runnable accionActualizar;
 
     private JPanel encabezado;
@@ -182,9 +183,11 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
             fila.setBackground(isSelected ? list.getSelectionBackground() : list.getBackground());
             JLabel autor = new JLabel("@" + value.getAutor());
             autor.setFont(new Font("Arial", Font.BOLD, 12));
+            autor.setForeground(isSelected ? list.getSelectionForeground() : TemaInsta.TEXTO);
             fila.add(autor, BorderLayout.WEST);
             if (value.esSticker()) {
                 JLabel sticker = new JLabel("Sticker", SwingConstants.LEFT);
+                sticker.setForeground(isSelected ? list.getSelectionForeground() : TemaInsta.TEXTO);
                 ImageIcon icono = iconosSticker.get(value.getRutaSticker());
                 if (icono != null) {
                     sticker.setText("");
@@ -195,6 +198,7 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
                 fila.add(sticker, BorderLayout.CENTER);
             } else {
                 JLabel texto = new JLabel("<html><div style='width:300px;'>" + escaparHtml(value.getTexto()) + "</div></html>");
+                texto.setForeground(isSelected ? list.getSelectionForeground() : TemaInsta.TEXTO);
                 fila.add(texto, BorderLayout.CENTER);
             }
             return fila;
@@ -285,6 +289,7 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
                     ListaEnlazada<Publicacion> actualizadas = respuesta.getPublicaciones();
                     if (!actualizadas.isEmpty()) {
                         Publicacion actualizada = actualizadas.obtener(0);
+                        publicacion = actualizada;
                         modelo.clear();
                         cache.clear();
                         for (Comentario comentario : actualizada.getComentarios()) modelo.addElement(comentario);
@@ -534,17 +539,48 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
 
     @Override
     public void aplicarTema() {
+        setOpaque(true);
         setBackground(TemaInsta.TARJETA);
+        setBorder(BorderFactory.createLineBorder(TemaInsta.BORDE));
+
         encabezado.setBackground(TemaInsta.TARJETA);
         contenido.setBackground(TemaInsta.TARJETA);
         acciones.setBackground(TemaInsta.TARJETA);
-        for (Component componente : acciones.getComponents()) {
+
+        aplicarTemaRecursivo(this);
+        TemaComponentes.corregirContraste(this);
+
+        revalidate();
+        repaint();
+    }
+
+    private void aplicarTemaRecursivo(Container contenedor) {
+        for (Component componente : contenedor.getComponents()) {
+            if (componente instanceof JLabel label) {
+                label.setForeground(TemaInsta.TEXTO);
+
+                if (label.isOpaque()) {
+                    label.setBackground(TemaInsta.INPUT);
+                }
+            }
+
             if (componente instanceof JButton boton) {
+                boton.setOpaque(true);
+                boton.setContentAreaFilled(true);
+                boton.setFocusPainted(false);
                 boton.setBackground(TemaInsta.INPUT);
                 boton.setForeground(TemaInsta.TEXTO);
             }
+
+            if (componente instanceof JScrollPane scroll) {
+                scroll.setBackground(TemaInsta.FONDO);
+                scroll.getViewport().setBackground(TemaInsta.FONDO);
+            }
+
+            if (componente instanceof Container interno) {
+                aplicarTemaRecursivo(interno);
+            }
         }
-        TemaComponentes.corregirContraste(this);
     }
 
     @FunctionalInterface

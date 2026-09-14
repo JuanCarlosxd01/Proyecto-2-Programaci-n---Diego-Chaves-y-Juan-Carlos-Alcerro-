@@ -423,6 +423,8 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
         btnVolver.setForeground(TemaInsta.oscuro ? Color.WHITE : new Color(0, 105, 185));
         btnVolver.setBorder(BorderFactory.createLineBorder(new Color(0, 149, 246), 1));
 
+        TemaComponentes.corregirContraste(this);
+
         revalidate();
         repaint();
     }

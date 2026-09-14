@@ -437,6 +437,8 @@ public class EditarPerfilPanel extends JPanel implements Tematizable {
         btnEstadoCuenta.setForeground(TemaInsta.TEXTO);
 
         cambiarTexto(this);
+        TemaComponentes.corregirContraste(this);
+        lblFoto.setForeground(TemaInsta.TEXTO_SECUNDARIO);
 
         revalidate();
         repaint();

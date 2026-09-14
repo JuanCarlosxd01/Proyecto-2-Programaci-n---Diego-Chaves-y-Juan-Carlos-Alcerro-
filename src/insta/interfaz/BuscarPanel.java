@@ -143,6 +143,8 @@ public class BuscarPanel extends JPanel implements Tematizable {
 
     private void agregarUsuario(Respuesta.DatosUsuario usuario) {
         JPanel tarjeta = new JPanel(new BorderLayout(15, 10));
+        tarjeta.setOpaque(true);
+        tarjeta.setBackground(TemaInsta.TARJETA);
         tarjeta.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(TemaInsta.BORDE), BorderFactory.createEmptyBorder(12, 15, 12, 15)));
         tarjeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 95));
 
@@ -169,6 +171,11 @@ public class BuscarPanel extends JPanel implements Tematizable {
         datos.add(lblRelacion);
 
         JButton btnSeguir = new JButton(usuario.loSigo() ? "Dejar de seguir" : "Seguir");
+        btnSeguir.setOpaque(true);
+        btnSeguir.setContentAreaFilled(true);
+        btnSeguir.setFocusPainted(false);
+        btnSeguir.setBackground(usuario.loSigo() ? TemaInsta.INPUT : TemaInsta.BOTON);
+        btnSeguir.setForeground(usuario.loSigo() ? TemaInsta.TEXTO : TemaInsta.BOTON_TEXTO);
         btnSeguir.addActionListener(e -> cambiarSeguimiento(usuario, btnSeguir));
         tarjeta.add(datos, BorderLayout.CENTER);
         tarjeta.add(btnSeguir, BorderLayout.EAST);
@@ -233,6 +240,7 @@ public class BuscarPanel extends JPanel implements Tematizable {
         btnBuscar.setBackground(TemaInsta.BOTON);
         btnBuscar.setForeground(TemaInsta.BOTON_TEXTO);
         cambiarTexto(this);
+        TemaComponentes.corregirContraste(this);
         revalidate();
         repaint();
     }

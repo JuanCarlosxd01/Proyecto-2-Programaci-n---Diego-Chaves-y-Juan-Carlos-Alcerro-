@@ -197,6 +197,8 @@ public class HashtagPanel extends JPanel implements Tematizable {
 
         cambiarTexto(this);
 
+        TemaComponentes.corregirContraste(this);
+
         revalidate();
         repaint();
     }

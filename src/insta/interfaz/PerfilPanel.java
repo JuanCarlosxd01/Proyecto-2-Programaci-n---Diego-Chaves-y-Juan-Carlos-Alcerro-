@@ -19,6 +19,9 @@ public class PerfilPanel extends JPanel implements Tematizable {
     private JPanel panelCentroPublicaciones;
     private CardLayout layoutPublicaciones;
     private JPanel panelDetallePublicacion;
+    private JPanel panelContenedorPublicaciones;
+    private JScrollPane scrollPublicaciones;
+    private JLabel lblTituloPublicaciones;
 
     private JLabel lblFoto;
     private JLabel lblNombre;
@@ -115,20 +118,21 @@ public class PerfilPanel extends JPanel implements Tematizable {
         layoutPublicaciones = new CardLayout();
         panelCentroPublicaciones = new JPanel(layoutPublicaciones);
 
-        JPanel contenedor = new JPanel(new BorderLayout());
-        contenedor.setBorder(new EmptyBorder(10, 40, 20, 40));
+        panelContenedorPublicaciones = new JPanel(new BorderLayout());
+        panelContenedorPublicaciones.setBorder(new EmptyBorder(10, 40, 20, 40));
 
-        JLabel titulo = new JLabel("PUBLICACIONES", SwingConstants.CENTER);
-        titulo.setFont(new Font("Arial", Font.BOLD, 14));
+        lblTituloPublicaciones = new JLabel("PUBLICACIONES", SwingConstants.CENTER);
+        lblTituloPublicaciones.setFont(new Font("Arial", Font.BOLD, 14));
+        lblTituloPublicaciones.setBorder(new EmptyBorder(0, 0, 10, 0));
 
         panelGridPublicaciones = new JPanel(new GridLayout(0, 3, 10, 10));
-        contenedor.add(titulo, BorderLayout.NORTH);
-        contenedor.add(panelGridPublicaciones, BorderLayout.CENTER);
+        panelContenedorPublicaciones.add(lblTituloPublicaciones, BorderLayout.NORTH);
+        panelContenedorPublicaciones.add(panelGridPublicaciones, BorderLayout.CENTER);
 
-        JScrollPane scroll = new JScrollPane(contenedor);
-        scroll.setBorder(null);
-        scroll.getVerticalScrollBar().setUnitIncrement(18);
-        panelCentroPublicaciones.add(scroll, "GRID");
+        scrollPublicaciones = new JScrollPane(panelContenedorPublicaciones);
+        scrollPublicaciones.setBorder(null);
+        scrollPublicaciones.getVerticalScrollBar().setUnitIncrement(18);
+        panelCentroPublicaciones.add(scrollPublicaciones, "GRID");
         panelDetallePublicacion = new JPanel(new BorderLayout());
         panelCentroPublicaciones.add(panelDetallePublicacion, "DETALLE");
         add(panelCentroPublicaciones, BorderLayout.CENTER);
@@ -183,7 +187,8 @@ public class PerfilPanel extends JPanel implements Tematizable {
 
     private void agregarPublicacion(Publicacion publicacion) {
         JPanel tarjeta = new JPanel(new BorderLayout());
-
+        tarjeta.setOpaque(true);
+        tarjeta.setBackground(TemaInsta.TARJETA);
         tarjeta.setPreferredSize(new Dimension(220, 220));
         tarjeta.setBorder(BorderFactory.createLineBorder(TemaInsta.BORDE));
 
@@ -197,6 +202,7 @@ public class PerfilPanel extends JPanel implements Tematizable {
 
             texto.setFont(new Font("Arial", Font.PLAIN, 14));
             texto.setBorder(new EmptyBorder(15, 15, 15, 15));
+            texto.setForeground(TemaInsta.TEXTO);
 
             tarjeta.add(texto, BorderLayout.CENTER);
 
@@ -219,6 +225,7 @@ public class PerfilPanel extends JPanel implements Tematizable {
                 );
 
                 descripcion.setBorder(new EmptyBorder(5, 8, 5, 8));
+                descripcion.setForeground(TemaInsta.TEXTO);
 
                 tarjeta.add(descripcion, BorderLayout.SOUTH);
             }
@@ -244,8 +251,6 @@ public class PerfilPanel extends JPanel implements Tematizable {
                 }
             }
         });
-
-        tarjeta.setBackground(TemaInsta.FONDO);
 
         panelGridPublicaciones.add(tarjeta);
     }
@@ -288,6 +293,7 @@ public class PerfilPanel extends JPanel implements Tematizable {
     private void mostrarPublicacionCompleta(Publicacion publicacion) {
         JPanel vista = new JPanel(new BorderLayout(0, 10));
         vista.setBorder(new EmptyBorder(12, 18, 18, 18));
+        vista.setBackground(TemaInsta.FONDO);
 
         JButton volver = new JButton("← Volver a publicaciones");
         volver.setFocusPainted(false);
@@ -302,6 +308,7 @@ public class PerfilPanel extends JPanel implements Tematizable {
         });
         JPanel centro = new JPanel(new BorderLayout());
         centro.setBorder(new EmptyBorder(5, 40, 20, 40));
+        centro.setBackground(TemaInsta.FONDO);
         centro.add(tarjeta, BorderLayout.NORTH);
         JScrollPane scrollDetalle = new JScrollPane(centro);
         scrollDetalle.setBorder(null);
@@ -434,9 +441,41 @@ public class PerfilPanel extends JPanel implements Tematizable {
         btnSeguir.setForeground(TemaInsta.BOTON_TEXTO);
 
         cambiarTexto(this);
+        aplicarTemaTarjetas(panelGridPublicaciones);
+        aplicarTemaTarjetas(panelDetallePublicacion);
+        TemaComponentes.corregirContraste(this);
 
         revalidate();
         repaint();
+    }
+
+    private void aplicarTemaTarjetas(Container contenedor) {
+        if (contenedor == null) {
+            return;
+        }
+
+        for (Component componente : contenedor.getComponents()) {
+            if (componente instanceof TarjetaPublicacionPanel tarjetaPublicacion) {
+                tarjetaPublicacion.aplicarTema();
+                continue;
+            }
+
+            if (componente instanceof JPanel panel && panel.isOpaque()) {
+                panel.setBackground(TemaInsta.TARJETA);
+            }
+
+            if (componente instanceof JLabel label) {
+                label.setForeground(TemaInsta.TEXTO);
+
+                if (label.isOpaque()) {
+                    label.setBackground(TemaInsta.INPUT);
+                }
+            }
+
+            if (componente instanceof Container interno) {
+                aplicarTemaTarjetas(interno);
+            }
+        }
     }
 
     private void cambiarTexto(Container contenedor) {

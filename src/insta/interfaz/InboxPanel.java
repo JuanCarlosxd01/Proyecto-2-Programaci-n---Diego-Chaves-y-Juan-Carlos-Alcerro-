@@ -35,7 +35,6 @@ public class InboxPanel extends JPanel implements Tematizable {
     private JList<String> listaConversaciones;
 
     private JLabel lblUsuarioChat;
-    private JLabel lblConversaciones;
 
     private JTextField txtMensaje;
 
@@ -76,9 +75,8 @@ public class InboxPanel extends JPanel implements Tematizable {
         panelIzquierdo.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         JPanel encabezadoIzquierdo = new JPanel(new BorderLayout());
-        encabezadoIzquierdo.setOpaque(false);
 
-        lblConversaciones = new JLabel("Mensajes");
+        JLabel lblConversaciones = new JLabel("Mensajes");
         lblConversaciones.setFont(new Font("Arial", Font.BOLD, 22));
 
         JPanel botones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
@@ -874,13 +872,6 @@ public class InboxPanel extends JPanel implements Tematizable {
         listaConversaciones.setSelectionForeground(TemaInsta.TEXTO);
 
         lblUsuarioChat.setForeground(TemaInsta.TEXTO);
-        lblConversaciones.setForeground(TemaInsta.TEXTO);
-
-        txtBuscarChat.setBackground(TemaInsta.INPUT);
-        txtBuscarChat.setForeground(TemaInsta.TEXTO);
-        txtBuscarChat.setCaretColor(TemaInsta.TEXTO);
-        btnBuscarChat.setBackground(TemaInsta.INPUT);
-        btnBuscarChat.setForeground(TemaInsta.TEXTO);
 
         txtMensaje.setBackground(TemaInsta.INPUT);
         txtMensaje.setForeground(TemaInsta.TEXTO);
@@ -908,12 +899,18 @@ public class InboxPanel extends JPanel implements Tematizable {
 
         cambiarTexto(this);
 
+        TemaComponentes.corregirContraste(this);
+
         revalidate();
         repaint();
     }
 
     private void cambiarTexto(Container contenedor) {
-        TemaComponentes.corregirContraste(contenedor);
+        for (Component componente : contenedor.getComponents()) {
+            if (componente instanceof Container interno) {
+                cambiarTexto(interno);
+            }
+        }
     }
 
     public DefaultListModel<String> getModeloConversaciones() {

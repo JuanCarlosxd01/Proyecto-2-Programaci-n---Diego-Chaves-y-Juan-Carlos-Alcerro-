@@ -245,6 +245,7 @@ public class TimelinePanel extends JPanel implements Tematizable {
         setBackground(TemaInsta.FONDO);
         panelHistorias.setBackground(TemaInsta.FONDO);
         panelPublicaciones.setBackground(TemaInsta.FONDO_SECUNDARIO);
+        TemaComponentes.corregirContraste(this);
 
         revalidate();
         repaint();
@@ -254,6 +255,7 @@ public class TimelinePanel extends JPanel implements Tematizable {
         for (Component componente : contenedor.getComponents()) {
             if (componente instanceof TarjetaPublicacionPanel tarjeta) {
                 tarjeta.aplicarTema();
+                continue;
             } else if (componente instanceof JPanel panel && panel.isOpaque()) {
                 panel.setBackground(TemaInsta.FONDO);
             }

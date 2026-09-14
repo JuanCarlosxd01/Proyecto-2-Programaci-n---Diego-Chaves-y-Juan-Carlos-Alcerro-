@@ -199,6 +199,8 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
         btnCrearCuenta.setForeground(Color.WHITE);
         btnCrearCuenta.setBorder(BorderFactory.createEmptyBorder(9, 12, 9, 12));
 
+        TemaComponentes.corregirContraste(this);
+
         revalidate();
         repaint();
     }

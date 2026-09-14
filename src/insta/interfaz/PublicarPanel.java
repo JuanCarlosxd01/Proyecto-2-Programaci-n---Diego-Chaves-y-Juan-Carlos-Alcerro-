@@ -483,6 +483,8 @@ public class PublicarPanel extends JPanel implements Tematizable {
         btnPublicar.setBackground(TemaInsta.BOTON);
         btnPublicar.setForeground(TemaInsta.BOTON_TEXTO);
         cambiarTexto(this);
+        TemaComponentes.corregirContraste(this);
+
         revalidate();
         repaint();
     }
