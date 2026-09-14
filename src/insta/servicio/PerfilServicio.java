@@ -83,6 +83,7 @@ public class PerfilServicio {
 
                 int edad = Integer.parseInt(solicitud.arg(2));
                 String nueva = solicitud.arg(4);
+                String biografia = solicitud.arg(5);
 
                 if (genero.length() != 1) {
                     throw new IllegalArgumentException(
@@ -110,6 +111,7 @@ public class PerfilServicio {
                 usuario.setNombreCompleto(nombre);
                 usuario.setGenero(genero.charAt(0));
                 usuario.setEdad(edad);
+                usuario.setBiografia(biografia);
 
                 if (!nueva.isEmpty()) {
                     var credenciales =

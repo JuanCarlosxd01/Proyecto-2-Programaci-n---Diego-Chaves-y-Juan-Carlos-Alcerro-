@@ -99,6 +99,8 @@ public class CMDPanel extends JPanel{
     private void mostrarMensajeBienvenida(){
         areaSalida.append("Microsoft Windows [Versión Simulada 10.0.19045]\n");
         areaSalida.append("(c) Consola de Comandos Simulada. Todos los derechos reservados.\n");
+        areaSalida.append("Unidad activa: " + gestorArchivos.obtenerPrompt().replace(">", "") + "\n");
+        areaSalida.append("Los archivos creados aquí son los mismos de la unidad del usuario en el Explorador.\n");
         areaSalida.append("Escriba 'Help' para ver la lista de comandos disponibles.\n\n");
     }
 

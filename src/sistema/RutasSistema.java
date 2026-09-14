@@ -1,15 +1,13 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package sistema;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.text.Normalizer;
 import modelo.UsuarioSistema;
-/**
- *
- * @author diego
- */
+
 public final class RutasSistema {
 
     public static final String NOMBRE_RAIZ = "Z";
@@ -29,7 +27,6 @@ public final class RutasSistema {
             return null;
         }
 
-        SeguridadArchivos.nombre(username.trim());
         return new File(getRaizSistema(), username.trim());
     }
 
@@ -112,10 +109,6 @@ public final class RutasSistema {
             return getRaizSistema();
         }
 
-        if (usuario.esAdministrador()) {
-            return getRaizSistema();
-        }
-
         return getCarpetaUsuario(usuario);
     }
 
@@ -136,6 +129,8 @@ public final class RutasSistema {
             carpetaUsuario.mkdirs();
         }
 
+        normalizarCarpetasPrincipales(carpetaUsuario);
+
         File documentos = getDocumentos(usuario);
         File musica = getMusica(usuario);
         File imagenes = getImagenes(usuario);
@@ -151,5 +146,109 @@ public final class RutasSistema {
         if (!imagenes.exists()) {
             imagenes.mkdirs();
         }
+    }
+
+    public static boolean esCarpetaPrincipal(File archivo) {
+        if (archivo == null || !archivo.isDirectory()) {
+            return false;
+        }
+
+        try {
+            File padre = archivo.getParentFile();
+            if (padre == null || !padre.getParentFile().getCanonicalFile().equals(getRaizSistema().getCanonicalFile())) {
+                return false;
+            }
+
+            String nombre = archivo.getName();
+            return nombre.equals(NOMBRE_DOCUMENTOS) || nombre.equals(NOMBRE_MUSICA) || nombre.equals(NOMBRE_IMAGENES);
+        } catch (IOException | NullPointerException e) {
+            return false;
+        }
+    }
+
+    private static void normalizarCarpetasPrincipales(File carpetaUsuario) {
+        File[] carpetas = carpetaUsuario.listFiles(File::isDirectory);
+        if (carpetas == null) {
+            return;
+        }
+
+        for (File carpeta : carpetas) {
+            String nombreCorrecto = nombrePrincipalEquivalente(carpeta.getName());
+            if (nombreCorrecto == null || carpeta.getName().equals(nombreCorrecto)) {
+                continue;
+            }
+
+            File destino = new File(carpetaUsuario, nombreCorrecto);
+            try {
+                fusionarCarpeta(carpeta, destino);
+            } catch (IOException e) {
+                System.err.println("No se pudo normalizar la carpeta " + carpeta.getName() + ": " + e.getMessage());
+            }
+        }
+    }
+
+    private static String nombrePrincipalEquivalente(String nombre) {
+        if (nombre == null) {
+            return null;
+        }
+
+        String simple = Normalizer.normalize(nombre, Normalizer.Form.NFD).replaceAll("\\p{M}+", "").toLowerCase().trim();
+        String compacto = simple.replaceAll("[^a-z0-9]", "");
+
+        if (compacto.equals("misdocumentos")) {
+            return NOMBRE_DOCUMENTOS;
+        }
+        if (compacto.equals("musica") || (compacto.startsWith("m") && compacto.endsWith("sica") && compacto.length() <= 10)) {
+            return NOMBRE_MUSICA;
+        }
+        if (compacto.equals("misimagenes") || (compacto.startsWith("misim") && compacto.endsWith("genes"))) {
+            return NOMBRE_IMAGENES;
+        }
+        return null;
+    }
+
+    private static void fusionarCarpeta(File origen, File destino) throws IOException {
+        if (!destino.exists() && Files.move(origen.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING) != null) {
+            return;
+        }
+
+        if (!destino.exists() && !destino.mkdirs()) {
+            throw new IOException("No se pudo crear " + destino.getName());
+        }
+
+        File[] hijos = origen.listFiles();
+        if (hijos != null) {
+            for (File hijo : hijos) {
+                File nuevoDestino = new File(destino, hijo.getName());
+                if (hijo.isDirectory()) {
+                    fusionarCarpeta(hijo, nuevoDestino);
+                } else if (!nuevoDestino.exists()) {
+                    Files.move(hijo.toPath(), nuevoDestino.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                } else {
+                    File alterno = nombreDisponible(destino, hijo.getName());
+                    Files.move(hijo.toPath(), alterno.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+
+        Files.deleteIfExists(origen.toPath());
+    }
+
+    private static File nombreDisponible(File carpeta, String nombreOriginal) {
+        String base = nombreOriginal;
+        String extension = "";
+        int punto = nombreOriginal.lastIndexOf('.');
+        if (punto > 0) {
+            base = nombreOriginal.substring(0, punto);
+            extension = nombreOriginal.substring(punto);
+        }
+
+        int numero = 1;
+        File candidato;
+        do {
+            candidato = new File(carpeta, base + " (migrado " + numero + ")" + extension);
+            numero++;
+        } while (candidato.exists());
+        return candidato;
     }
 }

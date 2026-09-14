@@ -8,6 +8,10 @@ import insta.modelo.*;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.HashSet;
+import java.util.Map;
 /**
  *
  * @author diego
@@ -25,6 +29,13 @@ final class FiltroRed {
             ListaEnlazada.class,
             Publicacion.class,
             Publicacion.Tipo.class,
+            Comentario.class,
+            Comentario.Tipo.class,
+            ArrayList.class,
+            LinkedHashSet.class,
+            HashSet.class,
+            Map.Entry[].class,
+            Object[].class,
             Mensaje.class,
             Mensaje.Tipo.class,
             Sticker.class,

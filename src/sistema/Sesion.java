@@ -5,7 +5,11 @@ import modelo.UsuarioSistema;
 
 public class Sesion {
 
-    private static volatile UsuarioSistema usuarioActual;
+    private static UsuarioSistema usuarioActual;
+
+    private Sesion() {
+
+    }
 
     public static void iniciarSesion(UsuarioSistema usuario) {
         usuarioActual = usuario;
@@ -24,7 +28,14 @@ public class Sesion {
     }
 
     public static boolean esAdministrador() {
-        return usuarioActual != null
-                && usuarioActual.esAdministrador();
+        return usuarioActual != null && usuarioActual.esAdministrador();
+    }
+
+    public static String getNombreUsuario() {
+        if (usuarioActual == null) {
+            return "";
+        }
+
+        return usuarioActual.getUsername();
     }
 }

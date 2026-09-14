@@ -1,22 +1,30 @@
 
 package insta.interfaz;
 
+import estructuras.ListaEnlazada;
+import insta.modelo.Publicacion;
 import java.awt.*;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import red.Cliente;
+import red.Respuesta;
 
 public class InteraccionesPanel extends JPanel implements Tematizable {
 
     private JPanel panelEncabezado;
     private JPanel panelInteracciones;
-
     private JButton btnActualizar;
+    private Cliente cliente;
 
-    public InteraccionesPanel() {
+    public InteraccionesPanel(Cliente cliente) {
+        this.cliente = cliente;
+
         setLayout(new BorderLayout());
 
         crearEncabezado();
         crearContenido();
+        configurarEventos();
 
         aplicarTema();
     }
@@ -25,7 +33,7 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
         panelEncabezado = new JPanel(new BorderLayout());
         panelEncabezado.setBorder(new EmptyBorder(20, 30, 15, 30));
 
-        JLabel titulo = new JLabel("Interacciones");
+        JLabel titulo = new JLabel("Menciones");
         titulo.setFont(new Font("Arial", Font.BOLD, 25));
 
         btnActualizar = new JButton("Actualizar");
@@ -41,16 +49,79 @@ public class InteraccionesPanel extends JPanel implements Tematizable {
         panelInteracciones.setLayout(new BoxLayout(panelInteracciones, BoxLayout.Y_AXIS));
         panelInteracciones.setBorder(new EmptyBorder(20, 50, 20, 50));
 
-        JLabel mensaje = new JLabel("Aquí aparecerán las publicaciones donde te mencionen.");
+        JScrollPane scroll = new JScrollPane(panelInteracciones);
+        scroll.setBorder(null);
+        scroll.getVerticalScrollBar().setUnitIncrement(18);
+
+        add(scroll, BorderLayout.CENTER);
+    }
+
+    private void configurarEventos() {
+        btnActualizar.addActionListener(e -> cargarMenciones());
+    }
+
+    public void cargarMenciones() {
+        panelInteracciones.removeAll();
+
+        JLabel cargando = new JLabel("Cargando menciones...");
+        cargando.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panelInteracciones.add(cargando);
+
+        panelInteracciones.revalidate();
+        panelInteracciones.repaint();
+
+        SwingWorker<ListaEnlazada<Publicacion>, Void> trabajador = new SwingWorker<>() {
+
+            @Override
+            protected ListaEnlazada<Publicacion> doInBackground() throws Exception {
+                return PaginadorInsta.publicaciones(desde -> cliente.menciones(desde));
+            }
+
+            @Override
+            protected void done() {
+                panelInteracciones.removeAll();
+
+                try {
+                    ListaEnlazada<Publicacion> publicaciones = get();
+
+                    if (publicaciones.isEmpty()) {
+                        mostrarMensaje("Todavía nadie te ha mencionado.");
+                        return;
+                    }
+
+                    for (Publicacion publicacion : publicaciones) {
+                        agregarPublicacion(publicacion);
+                    }
+
+                } catch (Exception e) {
+                    mostrarMensaje("No se pudieron cargar las menciones.");
+                }
+
+                aplicarTema();
+                panelInteracciones.revalidate();
+                panelInteracciones.repaint();
+            }
+        };
+
+        trabajador.execute();
+    }
+
+    private void agregarPublicacion(Publicacion publicacion) {
+        TarjetaPublicacionPanel tarjeta = new TarjetaPublicacionPanel(cliente, publicacion, this::cargarMenciones);
+        panelInteracciones.add(tarjeta);
+        panelInteracciones.add(Box.createVerticalStrut(15));
+    }
+
+    private void mostrarMensaje(String texto) {
+        JLabel mensaje = new JLabel(texto);
         mensaje.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mensaje.setForeground(TemaInsta.TEXTO);
 
         panelInteracciones.add(Box.createVerticalStrut(40));
         panelInteracciones.add(mensaje);
 
-        JScrollPane scroll = new JScrollPane(panelInteracciones);
-        scroll.setBorder(null);
-
-        add(scroll, BorderLayout.CENTER);
+        panelInteracciones.revalidate();
+        panelInteracciones.repaint();
     }
 
     @Override

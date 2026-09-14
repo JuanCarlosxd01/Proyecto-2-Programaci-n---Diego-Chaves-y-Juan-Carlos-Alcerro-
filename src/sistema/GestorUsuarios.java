@@ -1,9 +1,8 @@
 
-
 package sistema;
 
-import java.io.File;
 import java.util.ArrayList;
+import modelo.ConfiguracionSistema;
 import modelo.TipoUsuario;
 import modelo.UsuarioSistema;
 import persistencia.GestorUsuariosBinario;
@@ -15,7 +14,14 @@ public class GestorUsuarios {
 
     public GestorUsuarios() {
         gestorBinario = new GestorUsuariosBinario();
+
         usuarios = gestorBinario.cargarUsuarios();
+
+        if (usuarios == null) {
+            System.err.println("No se pudieron cargar los usuarios guardados. Se intentará recuperar el sistema.");
+            gestorBinario.respaldarArchivoCorrupto();
+            usuarios = new ArrayList<>();
+        }
 
         if (usuarios.isEmpty()) {
             crearAdministradorInicial();
@@ -27,24 +33,36 @@ public class GestorUsuarios {
     }
 
     private void crearAdministradorInicial() {
-        UsuarioSistema admin = new UsuarioSistema(
-                "admin",
-                "admin",
-                TipoUsuario.ADMINISTRADOR
-        );
+        if (buscarUsuario(ConfiguracionSistema.ADMIN_USUARIO) != null) {
+            return;
+        }
+
+        UsuarioSistema admin = new UsuarioSistema(ConfiguracionSistema.ADMIN_USUARIO, ConfiguracionSistema.ADMIN_CONTRASENA, TipoUsuario.ADMINISTRADOR);
 
         usuarios.add(admin);
+
         crearCarpetasUsuario(admin);
+
         gestorBinario.guardarUsuarios(usuarios);
     }
 
-    public UsuarioSistema iniciarSesion(
-            String username,
-            String contrasena
-    ) {
+    public UsuarioSistema iniciarSesion(String username, String contrasena) {
+        if (username == null || contrasena == null) {
+            return null;
+        }
+
+        username = username.trim();
+
+        if (username.isEmpty() || contrasena.isEmpty()) {
+            return null;
+        }
+
         for (UsuarioSistema usuario : usuarios) {
-            if (usuario.getUsername().equalsIgnoreCase(username)
-                    && usuario.getContrasena().equals(contrasena)) {
+            boolean mismoUsuario = usuario.getUsername().equalsIgnoreCase(username);
+            boolean mismaContrasena = usuario.getContrasena().equals(contrasena);
+            boolean usuarioActivo = usuario.estaActivo();
+
+            if (mismoUsuario && mismaContrasena && usuarioActivo) {
                 return usuario;
             }
         }
@@ -57,13 +75,13 @@ public class GestorUsuarios {
             return false;
         }
 
-        try {
-            SeguridadArchivos.nombre(username);
-        } catch (IllegalArgumentException e) {
+        if (username == null || contrasena == null) {
             return false;
         }
 
-        if (contrasena == null || contrasena.isBlank()) {
+        username = username.trim();
+
+        if (username.isEmpty() || !UsuarioSistema.contrasenaValida(contrasena)) {
             return false;
         }
 
@@ -71,22 +89,24 @@ public class GestorUsuarios {
             return false;
         }
 
-        UsuarioSistema nuevo = new UsuarioSistema(
-                username,
-                contrasena,
-                TipoUsuario.ESTANDAR
-        );
+        UsuarioSistema nuevo = new UsuarioSistema(username, contrasena, TipoUsuario.ESTANDAR);
 
         usuarios.add(nuevo);
+
         crearCarpetasUsuario(nuevo);
+
         gestorBinario.guardarUsuarios(usuarios);
 
         return true;
     }
 
     public UsuarioSistema buscarUsuario(String username) {
+        if (username == null) {
+            return null;
+        }
+
         for (UsuarioSistema usuario : usuarios) {
-            if (usuario.getUsername().equalsIgnoreCase(username)) {
+            if (usuario.getUsername().equalsIgnoreCase(username.trim())) {
                 return usuario;
             }
         }
@@ -94,35 +114,81 @@ public class GestorUsuarios {
         return null;
     }
 
+    public boolean desactivarUsuario(String username) {
+        if (!Sesion.esAdministrador()) {
+            return false;
+        }
+
+        UsuarioSistema usuario = buscarUsuario(username);
+
+        if (usuario == null) {
+            return false;
+        }
+
+        if (usuario.esAdministrador()) {
+            return false;
+        }
+
+        usuario.setActivo(false);
+
+        gestorBinario.guardarUsuarios(usuarios);
+
+        return true;
+    }
+
+    public boolean activarUsuario(String username) {
+        if (!Sesion.esAdministrador()) {
+            return false;
+        }
+
+        UsuarioSistema usuario = buscarUsuario(username);
+
+        if (usuario == null) {
+            return false;
+        }
+
+        usuario.setActivo(true);
+
+        gestorBinario.guardarUsuarios(usuarios);
+
+        return true;
+    }
+
+    public boolean cambiarContrasena(String username, String nuevaContrasena) {
+        if (username == null || nuevaContrasena == null) {
+            return false;
+        }
+
+        UsuarioSistema usuario = buscarUsuario(username);
+
+        if (usuario == null || !UsuarioSistema.contrasenaValida(nuevaContrasena)) {
+            return false;
+        }
+
+        if (!Sesion.esAdministrador()) {
+            UsuarioSistema usuarioActual = Sesion.getUsuarioActual();
+
+            if (usuarioActual == null || !usuarioActual.getUsername().equalsIgnoreCase(username)) {
+                return false;
+            }
+        }
+
+        usuario.setContrasena(nuevaContrasena);
+
+        gestorBinario.guardarUsuarios(usuarios);
+
+        return true;
+    }
+
     private void crearCarpetasUsuario(UsuarioSistema usuario) {
-        SeguridadArchivos.nombre(usuario.getUsername());
+        RutasSistema.crearEstructuraUsuario(usuario);
+    }
 
-        File carpetaUsuario = new File(
-                "Z/" + usuario.getUsername()
-        );
-
-        if (!carpetaUsuario.exists()) {
-            carpetaUsuario.mkdirs();
-        }
-
-        File documentos = new File(carpetaUsuario, "Mis Documentos");
-        File musica = new File(carpetaUsuario, "Música");
-        File imagenes = new File(carpetaUsuario, "Mis Imágenes");
-
-        if (!documentos.exists()) {
-            documentos.mkdirs();
-        }
-
-        if (!musica.exists()) {
-            musica.mkdirs();
-        }
-
-        if (!imagenes.exists()) {
-            imagenes.mkdirs();
-        }
+    public void guardarUsuarios() {
+        gestorBinario.guardarUsuarios(usuarios);
     }
 
     public ArrayList<UsuarioSistema> getUsuarios() {
-        return usuarios;
+        return new ArrayList<>(usuarios);
     }
 }

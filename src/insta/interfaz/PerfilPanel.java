@@ -1,11 +1,14 @@
 
 package insta.interfaz;
 
+import estructuras.ListaEnlazada;
+import insta.modelo.Publicacion;
 import java.awt.*;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import red.Cliente;
 import red.Respuesta;
-import java.time.format.DateTimeFormatter;
 
 public class PerfilPanel extends JPanel implements Tematizable {
 
@@ -13,9 +16,13 @@ public class PerfilPanel extends JPanel implements Tematizable {
     private JPanel panelDatos;
     private JPanel panelEstadisticas;
     private JPanel panelGridPublicaciones;
+    private JPanel panelCentroPublicaciones;
+    private CardLayout layoutPublicaciones;
+    private JPanel panelDetallePublicacion;
 
     private JLabel lblFoto;
     private JLabel lblNombre;
+    private JLabel lblBiografia;
     private JLabel lblUsername;
     private JLabel lblEdad;
     private JLabel lblGenero;
@@ -27,9 +34,12 @@ public class PerfilPanel extends JPanel implements Tematizable {
     private JLabel lblPublicaciones;
 
     private JButton btnSeguir;
-    private JButton btnVerPublicaciones;
 
-    public PerfilPanel() {
+    private Cliente cliente;
+
+    public PerfilPanel(Cliente cliente) {
+        this.cliente = cliente;
+
         setLayout(new BorderLayout());
 
         crearPerfil();
@@ -56,14 +66,13 @@ public class PerfilPanel extends JPanel implements Tematizable {
         lblUsername.setFont(new Font("Arial", Font.BOLD, 23));
 
         btnSeguir = new JButton("Seguir");
-        btnVerPublicaciones = new JButton("Ver publicaciones");
 
         encabezado.add(lblUsername);
         encabezado.add(btnSeguir);
-        encabezado.add(btnVerPublicaciones);
 
         lblNombre = new JLabel("Nombre completo");
         lblNombre.setFont(new Font("Arial", Font.BOLD, 16));
+        lblBiografia = new JLabel("");
 
         lblEdad = new JLabel("Edad: --");
         lblGenero = new JLabel("Género: --");
@@ -86,6 +95,8 @@ public class PerfilPanel extends JPanel implements Tematizable {
         panelDatos.add(Box.createVerticalStrut(10));
         panelDatos.add(lblNombre);
         panelDatos.add(Box.createVerticalStrut(5));
+        panelDatos.add(lblBiografia);
+        panelDatos.add(Box.createVerticalStrut(5));
         panelDatos.add(lblEdad);
         panelDatos.add(Box.createVerticalStrut(5));
         panelDatos.add(lblGenero);
@@ -101,73 +112,264 @@ public class PerfilPanel extends JPanel implements Tematizable {
     }
 
     private void crearPublicaciones() {
+        layoutPublicaciones = new CardLayout();
+        panelCentroPublicaciones = new JPanel(layoutPublicaciones);
+
         JPanel contenedor = new JPanel(new BorderLayout());
         contenedor.setBorder(new EmptyBorder(10, 40, 20, 40));
 
         JLabel titulo = new JLabel("PUBLICACIONES", SwingConstants.CENTER);
         titulo.setFont(new Font("Arial", Font.BOLD, 14));
 
-        panelGridPublicaciones = new JPanel(new GridLayout(0, 3, 5, 5));
-
+        panelGridPublicaciones = new JPanel(new GridLayout(0, 3, 10, 10));
         contenedor.add(titulo, BorderLayout.NORTH);
         contenedor.add(panelGridPublicaciones, BorderLayout.CENTER);
 
         JScrollPane scroll = new JScrollPane(contenedor);
         scroll.setBorder(null);
-
-        add(scroll, BorderLayout.CENTER);
+        scroll.getVerticalScrollBar().setUnitIncrement(18);
+        panelCentroPublicaciones.add(scroll, "GRID");
+        panelDetallePublicacion = new JPanel(new BorderLayout());
+        panelCentroPublicaciones.add(panelDetallePublicacion, "DETALLE");
+        add(panelCentroPublicaciones, BorderLayout.CENTER);
     }
 
-    @Override
-    public void aplicarTema() {
-        setBackground(TemaInsta.FONDO);
+    public void cargarPublicaciones(String username) {
+        if (layoutPublicaciones != null) layoutPublicaciones.show(panelCentroPublicaciones, "GRID");
+        panelGridPublicaciones.removeAll();
 
-        panelSuperior.setBackground(TemaInsta.FONDO);
-        panelDatos.setBackground(TemaInsta.FONDO);
-        panelEstadisticas.setBackground(TemaInsta.FONDO);
-        panelGridPublicaciones.setBackground(TemaInsta.FONDO);
+        JLabel cargando = new JLabel("Cargando publicaciones...", SwingConstants.CENTER);
+        cargando.setForeground(TemaInsta.TEXTO);
 
-        lblFoto.setBackground(TemaInsta.INPUT);
-        lblFoto.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+        panelGridPublicaciones.add(cargando);
 
-        btnSeguir.setBackground(TemaInsta.BOTON);
-        btnSeguir.setForeground(TemaInsta.BOTON_TEXTO);
+        panelGridPublicaciones.revalidate();
+        panelGridPublicaciones.repaint();
 
-        btnVerPublicaciones.setBackground(TemaInsta.INPUT);
-        btnVerPublicaciones.setForeground(TemaInsta.TEXTO);
+        SwingWorker<ListaEnlazada<Publicacion>, Void> trabajador = new SwingWorker<>() {
 
-        cambiarTexto(this);
+            @Override
+            protected ListaEnlazada<Publicacion> doInBackground() throws Exception {
+                return PaginadorInsta.publicaciones(desde -> cliente.publicaciones(username, desde));
+            }
 
-        revalidate();
-        repaint();
+            @Override
+            protected void done() {
+                try {
+                    ListaEnlazada<Publicacion> publicaciones = get();
+                    panelGridPublicaciones.removeAll();
+
+                    if (publicaciones.isEmpty()) {
+                        mostrarSinPublicaciones();
+                    } else {
+                        for (Publicacion publicacion : publicaciones) {
+                            agregarPublicacion(publicacion);
+                        }
+                    }
+
+                } catch (Exception e) {
+                    panelGridPublicaciones.removeAll();
+
+                    mostrarError("No se pudieron cargar las publicaciones.");
+                }
+
+                panelGridPublicaciones.revalidate();
+                panelGridPublicaciones.repaint();
+            }
+        };
+
+        trabajador.execute();
     }
 
-    private void cambiarTexto(Container contenedor) {
-        for (Component componente : contenedor.getComponents()) {
-            if (componente instanceof JLabel label) {
-                label.setForeground(TemaInsta.TEXTO);
+    private void agregarPublicacion(Publicacion publicacion) {
+        JPanel tarjeta = new JPanel(new BorderLayout());
+
+        tarjeta.setPreferredSize(new Dimension(220, 220));
+        tarjeta.setBorder(BorderFactory.createLineBorder(TemaInsta.BORDE));
+
+        if (publicacion.esTexto()) {
+            JLabel texto = new JLabel(
+                    "<html><div style='width:180px;text-align:center;'>"
+                    + TarjetaPublicacionPanel.escaparHtml(publicacion.getContenido())
+                    + "</div></html>",
+                    SwingConstants.CENTER
+            );
+
+            texto.setFont(new Font("Arial", Font.PLAIN, 14));
+            texto.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+            tarjeta.add(texto, BorderLayout.CENTER);
+
+        } else if (publicacion.esImagen()) {
+            JLabel imagen = new JLabel("Cargando imagen...", SwingConstants.CENTER);
+
+            imagen.setPreferredSize(new Dimension(210, 180));
+            imagen.setOpaque(true);
+            imagen.setBackground(TemaInsta.INPUT);
+
+            tarjeta.add(imagen, BorderLayout.CENTER);
+
+            cargarImagenPublicacion(publicacion, imagen);
+
+            if (!publicacion.getContenido().isBlank()) {
+                JLabel descripcion = new JLabel(
+                        "<html><div style='width:190px;'>"
+                        + TarjetaPublicacionPanel.escaparHtml(publicacion.getContenido())
+                        + "</div></html>"
+                );
+
+                descripcion.setBorder(new EmptyBorder(5, 8, 5, 8));
+
+                tarjeta.add(descripcion, BorderLayout.SOUTH);
             }
 
-            if (componente instanceof JScrollPane scroll) {
-                scroll.getViewport().setBackground(TemaInsta.FONDO);
-            }
+        } else if (publicacion.esSticker()) {
+            JLabel sticker = new JLabel("Cargando sticker...", SwingConstants.CENTER);
 
-            if (componente instanceof Container interno) {
-                cambiarTexto(interno);
-            }
+            sticker.setPreferredSize(new Dimension(200, 200));
+            sticker.setOpaque(true);
+            sticker.setBackground(TemaInsta.INPUT);
+
+            tarjeta.add(sticker, BorderLayout.CENTER);
+
+            cargarImagenPublicacion(publicacion, sticker);
         }
 
-        lblFoto.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+        tarjeta.setToolTipText("Haz clic para abrir la publicación");
+        tarjeta.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 1) {
+                    mostrarPublicacionCompleta(publicacion);
+                }
+            }
+        });
+
+        tarjeta.setBackground(TemaInsta.FONDO);
+
+        panelGridPublicaciones.add(tarjeta);
     }
 
-    public JButton getBtnSeguir() {
-        return btnSeguir;
+    private void cargarImagenPublicacion(Publicacion publicacion, JLabel label) {
+        SwingWorker<Respuesta, Void> trabajador = new SwingWorker<>() {
+
+            @Override
+            protected Respuesta doInBackground() throws Exception {
+                return cliente.descargarImagen(publicacion.getRutaAdjunto());
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Respuesta respuesta = get();
+
+                    if (respuesta.esExitosa() && respuesta.getArchivo() != null) {
+                        byte[] datos = respuesta.getArchivo();
+
+                        int ancho = label.getPreferredSize().width;
+                        int alto = label.getPreferredSize().height;
+                        ImageIcon ajustada = ImagenUI.ajustar(datos, ancho, alto);
+                        label.setText("");
+                        label.setIcon(ajustada);
+
+                    } else {
+                        label.setText("Imagen no disponible");
+                    }
+
+                } catch (Exception e) {
+                    label.setText("Error al cargar imagen");
+                }
+            }
+        };
+
+        trabajador.execute();
     }
 
-    public JPanel getPanelGridPublicaciones() {
-        return panelGridPublicaciones;
+    private void mostrarPublicacionCompleta(Publicacion publicacion) {
+        JPanel vista = new JPanel(new BorderLayout(0, 10));
+        vista.setBorder(new EmptyBorder(12, 18, 18, 18));
+
+        JButton volver = new JButton("← Volver a publicaciones");
+        volver.setFocusPainted(false);
+        JPanel barra = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        barra.setOpaque(false);
+        barra.add(volver);
+        vista.add(barra, BorderLayout.NORTH);
+
+        TarjetaPublicacionPanel tarjeta = new TarjetaPublicacionPanel(cliente, publicacion, () -> {
+            cargarPublicaciones(publicacion.getAutor());
+            layoutPublicaciones.show(panelCentroPublicaciones, "GRID");
+        });
+        JPanel centro = new JPanel(new BorderLayout());
+        centro.setBorder(new EmptyBorder(5, 40, 20, 40));
+        centro.add(tarjeta, BorderLayout.NORTH);
+        JScrollPane scrollDetalle = new JScrollPane(centro);
+        scrollDetalle.setBorder(null);
+        scrollDetalle.getVerticalScrollBar().setUnitIncrement(18);
+        vista.add(scrollDetalle, BorderLayout.CENTER);
+
+        volver.addActionListener(e -> layoutPublicaciones.show(panelCentroPublicaciones, "GRID"));
+        panelDetallePublicacion.removeAll();
+        panelDetallePublicacion.add(vista, BorderLayout.CENTER);
+        layoutPublicaciones.show(panelCentroPublicaciones, "DETALLE");
+        panelDetallePublicacion.revalidate();
+        panelDetallePublicacion.repaint();
     }
-    
+
+    private void cargarFotoPerfil(String ruta) {
+        lblFoto.setIcon(null);
+        if (ruta == null || ruta.isBlank()) {
+            lblFoto.setText("SIN FOTO");
+            return;
+        }
+
+        SwingWorker<Respuesta, Void> trabajador = new SwingWorker<>() {
+            @Override
+            protected Respuesta doInBackground() throws Exception {
+                return cliente.descargarImagen(ruta);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Respuesta respuesta = get();
+                    if (respuesta.esExitosa() && respuesta.getArchivo() != null) {
+                        ImageIcon ajustada = ImagenUI.ajustar(respuesta.getArchivo(), 150, 150);
+                        lblFoto.setText("");
+                        lblFoto.setIcon(ajustada);
+                    } else {
+                        lblFoto.setText("SIN FOTO");
+                    }
+                } catch (Exception e) {
+                    lblFoto.setText("SIN FOTO");
+                }
+            }
+        };
+
+        trabajador.execute();
+    }
+
+    private void mostrarSinPublicaciones() {
+        JLabel mensaje = new JLabel("Este usuario todavía no tiene publicaciones.", SwingConstants.CENTER);
+
+        mensaje.setForeground(TemaInsta.TEXTO);
+
+        panelGridPublicaciones.add(mensaje);
+    }
+
+    private void mostrarError(String mensaje) {
+        JLabel error = new JLabel(mensaje, SwingConstants.CENTER);
+
+        error.setForeground(TemaInsta.TEXTO);
+
+        panelGridPublicaciones.add(error);
+    }
+
+    public void mostrarCargando() {
+        lblUsername.setText("@...");
+        lblNombre.setText("Cargando perfil...");
+    }
+
     public void mostrarUsuario(Respuesta.DatosUsuario usuario) {
         if (usuario == null) {
             return;
@@ -175,11 +377,15 @@ public class PerfilPanel extends JPanel implements Tematizable {
 
         lblUsername.setText("@" + usuario.getUsername());
         lblNombre.setText(usuario.getNombreCompleto());
+        lblBiografia.setText("<html>" + TarjetaPublicacionPanel.escaparHtml(usuario.getBiografia()) + "</html>");
+        cargarFotoPerfil(usuario.getRutaFotoPerfil());
+
         lblEdad.setText("Edad: " + usuario.getEdad());
         lblGenero.setText("Género: " + usuario.getGenero());
 
         if (usuario.getFechaRegistro() != null) {
             DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
             lblFecha.setText("Fecha de registro: " + usuario.getFechaRegistro().format(formato));
         } else {
             lblFecha.setText("Fecha de registro: --");
@@ -204,11 +410,59 @@ public class PerfilPanel extends JPanel implements Tematizable {
         revalidate();
         repaint();
     }
-    
+
     public void configurarComoPerfilPropio(boolean propio) {
         btnSeguir.setVisible(!propio);
 
         revalidate();
         repaint();
+    }
+
+    @Override
+    public void aplicarTema() {
+        setBackground(TemaInsta.FONDO);
+
+        panelSuperior.setBackground(TemaInsta.FONDO);
+        panelDatos.setBackground(TemaInsta.FONDO);
+        panelEstadisticas.setBackground(TemaInsta.FONDO);
+        panelGridPublicaciones.setBackground(TemaInsta.FONDO);
+
+        lblFoto.setBackground(TemaInsta.INPUT);
+        lblFoto.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+
+        btnSeguir.setBackground(TemaInsta.BOTON);
+        btnSeguir.setForeground(TemaInsta.BOTON_TEXTO);
+
+        cambiarTexto(this);
+
+        revalidate();
+        repaint();
+    }
+
+    private void cambiarTexto(Container contenedor) {
+        for (Component componente : contenedor.getComponents()) {
+
+            if (componente instanceof JLabel label) {
+                label.setForeground(TemaInsta.TEXTO);
+            }
+
+            if (componente instanceof JScrollPane scroll) {
+                scroll.getViewport().setBackground(TemaInsta.FONDO);
+            }
+
+            if (componente instanceof Container interno) {
+                cambiarTexto(interno);
+            }
+        }
+
+        lblFoto.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+    }
+
+    public JButton getBtnSeguir() {
+        return btnSeguir;
+    }
+
+    public JPanel getPanelGridPublicaciones() {
+        return panelGridPublicaciones;
     }
 }

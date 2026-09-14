@@ -1,8 +1,8 @@
 
-
 package CMD;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,8 +25,12 @@ public class ComandoCMD2 {
 
     public String ap(String nombreArchivo, String texto) {
         File archivo = resolver(nombreArchivo);
-        if (archivo == null) return "Ruta no permitida.";
-        if (!archivo.exists()) return "El archivo no existe.";
+        if (archivo == null) {
+            return "Ruta no permitida.";
+        }
+        if (!archivo.exists()) {
+            return "El archivo no existe.";
+        }
         if (!archivo.isFile()) {
             return "El nombre indicado no corresponde a un archivo.";
         }
@@ -44,8 +48,7 @@ public class ComandoCMD2 {
         File archivoActual = resolver(actual);
         File archivoNuevo = resolver(nuevo);
 
-        if (archivoActual == null || archivoNuevo == null
-                || archivoActual.equals(carpetaRaiz)) {
+        if (archivoActual == null || archivoNuevo == null || archivoActual.equals(carpetaRaiz)) {
             return "Ruta no permitida.";
         }
         if (!archivoActual.exists()) {
@@ -55,9 +58,7 @@ public class ComandoCMD2 {
             return "Ya existe un archivo o carpeta con ese nombre.";
         }
 
-        return archivoActual.renameTo(archivoNuevo)
-                ? "Renombrado correctamente."
-                : "No se pudo renombrar.";
+        return archivoActual.renameTo(archivoNuevo) ? "Renombrado correctamente." : "No se pudo renombrar.";
     }
 
     public String copy(String origen, String destino) {
@@ -78,11 +79,7 @@ public class ComandoCMD2 {
         }
 
         try {
-            Files.copy(
-                    archivoOrigen.toPath(),
-                    archivoDestino.toPath(),
-                    StandardCopyOption.COPY_ATTRIBUTES
-            );
+            Files.copy(archivoOrigen.toPath(), archivoDestino.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
             return "Archivo copiado correctamente.";
         } catch (IOException e) {
             return "Error al copiar el archivo.";
@@ -92,10 +89,12 @@ public class ComandoCMD2 {
     private String buscar(File carpeta, String nombre) {
         StringBuilder resultado = new StringBuilder();
         File[] archivos = carpeta.listFiles();
-        if (archivos == null) return "";
+
+        if (archivos == null) {
+            return "";
+        }
 
         for (File archivo : archivos) {
-            if (!sistema.SeguridadArchivos.esPermitido(archivo)) continue;
             if (archivo.getName().toLowerCase().contains(nombre.toLowerCase())) {
                 resultado.append(archivo.getAbsolutePath()).append("\n");
             }
@@ -103,26 +102,26 @@ public class ComandoCMD2 {
                 resultado.append(buscar(archivo, nombre));
             }
         }
+
         return resultado.toString();
     }
 
     public String find(String nombre) {
         String resultado = buscar(carpetaActual, nombre);
-        return resultado.isEmpty()
-                ? "No se encontraron archivos o carpetas."
-                : resultado;
+        return resultado.isEmpty() ? "No se encontraron archivos o carpetas." : resultado;
     }
 
     public String info(String nombre) {
         File archivo = resolver(nombre);
-        if (archivo == null) return "Ruta no permitida.";
-        if (!archivo.exists()) return "El archivo o carpeta no existe.";
+        if (archivo == null) {
+            return "Ruta no permitida.";
+        }
+        if (!archivo.exists()) {
+            return "El archivo o carpeta no existe.";
+        }
 
         String tipo = archivo.isDirectory() ? "Carpeta" : "Archivo";
-        return "Tipo: " + tipo
-                + "\nRuta: " + archivo.getAbsolutePath()
-                + "\nTamaño: " + archivo.length() + " bytes"
-                + "\nÚltima modificación: " + new Date(archivo.lastModified());
+        return "Tipo: " + tipo + "\nRuta: " + archivo.getAbsolutePath() + "\nTamaño: " + archivo.length() + " bytes\nÚltima modificación: " + new Date(archivo.lastModified());
     }
 
     public String tree() {
@@ -132,12 +131,11 @@ public class ComandoCMD2 {
     private String mostrarArbol(File carpeta, String espacio) {
         StringBuilder resultado = new StringBuilder();
         File[] archivos = carpeta.listFiles();
-        if (archivos == null) return "";
-
+        if (archivos == null) {
+            return "";
+        }
         for (File archivo : archivos) {
-            if (!sistema.SeguridadArchivos.esPermitido(archivo)) continue;
-            resultado.append(espacio).append("|-- ")
-                    .append(archivo.getName()).append("\n");
+            resultado.append(espacio).append("|-- ").append(archivo.getName()).append("\n");
             if (archivo.isDirectory()) {
                 resultado.append(mostrarArbol(archivo, espacio + "    "));
             }
@@ -180,16 +178,16 @@ public class ComandoCMD2 {
 
     private File resolver(String nombre) {
         File candidato = normalizar(new File(carpetaActual, nombre));
-        if (candidato == null
-                || !candidato.toPath().startsWith(carpetaRaiz.toPath())
-                || !sistema.SeguridadArchivos.esPermitido(candidato)) {
+        if (candidato == null || !candidato.toPath().startsWith(carpetaRaiz.toPath())) {
             return null;
         }
         return candidato;
     }
 
     private File normalizar(File archivo) {
-        if (archivo == null) return null;
+        if (archivo == null) {
+            return null;
+        }
         try {
             return archivo.getCanonicalFile();
         } catch (IOException e) {

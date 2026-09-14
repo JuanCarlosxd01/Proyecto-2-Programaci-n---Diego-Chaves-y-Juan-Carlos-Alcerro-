@@ -1,46 +1,37 @@
-
-
 package hilos;
 
 import java.io.File;
 import java.util.function.Consumer;
-import javax.swing.SwingWorker;
+import javax.swing.SwingUtilities;
 import sistema.OrganizadorArchivos;
 
-public final class HiloOrganizador extends SwingWorker<Integer, Void> {
+public class HiloOrganizador extends Thread {
 
     private final File carpeta;
-    private final File raiz;
-    private final Consumer<Integer> exito;
-    private final Consumer<Exception> error;
+    private final File raizUsuario;
+    private final Consumer<Integer> alTerminar;
+    private final Consumer<Throwable> alError;
 
-    public HiloOrganizador(
-            File carpeta,
-            File raiz,
-            Consumer<Integer> exito,
-            Consumer<Exception> error
-    ) {
+    public HiloOrganizador(File carpeta, File raizUsuario, Consumer<Integer> alTerminar, Consumer<Throwable> alError) {
+        super("organizador-archivos");
         this.carpeta = carpeta;
-        this.raiz = raiz;
-        this.exito = exito;
-        this.error = error;
+        this.raizUsuario = raizUsuario;
+        this.alTerminar = alTerminar;
+        this.alError = alError;
+        setDaemon(true);
     }
 
     @Override
-    protected Integer doInBackground() throws Exception {
-        return new OrganizadorArchivos().organizar(carpeta, raiz);
-    }
-
-    @Override
-    protected void done() {
-        if (isCancelled()) {
-            return;
-        }
-
+    public void run() {
         try {
-            exito.accept(get());
-        } catch (Exception e) {
-            error.accept(e);
+            int movidos = new OrganizadorArchivos().organizar(carpeta, raizUsuario);
+            if (alTerminar != null) {
+                SwingUtilities.invokeLater(() -> alTerminar.accept(movidos));
+            }
+        } catch (Throwable e) {
+            if (alError != null) {
+                SwingUtilities.invokeLater(() -> alError.accept(e));
+            }
         }
     }
 }

@@ -1,6 +1,8 @@
 
 package insta.interfaz;
 
+import interfaz.DialogosWindows;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -9,6 +11,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicButtonUI;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
@@ -183,6 +186,11 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
         btnCrearCuenta.setPreferredSize(new Dimension(300, 42));
         btnCrearCuenta.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnCrearCuenta.setFocusPainted(false);
+        btnCrearCuenta.setOpaque(true);
+        btnCrearCuenta.setContentAreaFilled(true);
+        btnCrearCuenta.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnCrearCuenta.setHorizontalAlignment(SwingConstants.CENTER);
+        btnCrearCuenta.setUI(new BasicButtonUI());
 
         panelFormulario.add(btnCrearCuenta, gbc);
 
@@ -192,6 +200,8 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
         btnVolver = new JButton("Ya tengo una cuenta");
         btnVolver.setPreferredSize(new Dimension(300, 42));
         btnVolver.setFocusPainted(false);
+        btnVolver.setHorizontalAlignment(SwingConstants.CENTER);
+        btnVolver.setUI(new BasicButtonUI());
 
         panelFormulario.add(btnVolver, gbc);
 
@@ -273,7 +283,7 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
             BufferedImage imagen = ImageIO.read(archivo);
 
             if (imagen == null) {
-                JOptionPane.showMessageDialog(this, "El archivo seleccionado no es una imagen válida.", "Foto de perfil", JOptionPane.ERROR_MESSAGE);
+                DialogosWindows.showMessageDialog(this, "El archivo seleccionado no es una imagen válida.", "Foto de perfil", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -288,7 +298,7 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
             lblFoto.setIcon(new ImageIcon(escalada));
 
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar la imagen.", "Foto de perfil", JOptionPane.ERROR_MESSAGE);
+            DialogosWindows.showMessageDialog(this, "No se pudo cargar la imagen.", "Foto de perfil", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -358,7 +368,7 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
     }
 
     private void mostrarError(String mensaje) {
-        JOptionPane.showMessageDialog(this, mensaje, "Crear cuenta", JOptionPane.WARNING_MESSAGE);
+        DialogosWindows.showMessageDialog(this, mensaje, "Crear cuenta", JOptionPane.WARNING_MESSAGE);
     }
 
     @Override
@@ -407,9 +417,11 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
 
         btnCrearCuenta.setBackground(TemaInsta.BOTON);
         btnCrearCuenta.setForeground(TemaInsta.BOTON_TEXTO);
+        btnCrearCuenta.setBorder(BorderFactory.createEmptyBorder(9, 12, 9, 12));
 
-        btnVolver.setBackground(TemaInsta.INPUT);
-        btnVolver.setForeground(TemaInsta.TEXTO);
+        btnVolver.setBackground(TemaInsta.oscuro ? new Color(45, 45, 45) : new Color(235, 242, 250));
+        btnVolver.setForeground(TemaInsta.oscuro ? Color.WHITE : new Color(0, 105, 185));
+        btnVolver.setBorder(BorderFactory.createLineBorder(new Color(0, 149, 246), 1));
 
         revalidate();
         repaint();

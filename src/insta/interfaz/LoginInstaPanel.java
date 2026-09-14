@@ -4,6 +4,9 @@ package insta.interfaz;
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicButtonUI;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class LoginInstaPanel extends JPanel implements Tematizable {
 
@@ -32,7 +35,7 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
     private void crearInterfaz() {
         panelCentral = new JPanel();
         panelCentral.setLayout(new BoxLayout(panelCentral, BoxLayout.Y_AXIS));
-        panelCentral.setPreferredSize(new Dimension(400, 470));
+        panelCentral.setPreferredSize(new Dimension(440, 600));
         panelCentral.setBorder(new EmptyBorder(35, 45, 35, 45));
 
         lblLogo = new JLabel("INSTA+");
@@ -78,6 +81,12 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
         btnIngresar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         btnIngresar.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnIngresar.setFocusPainted(false);
+        btnIngresar.setOpaque(true);
+        btnIngresar.setContentAreaFilled(true);
+        btnIngresar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnIngresar.setHorizontalAlignment(SwingConstants.CENTER);
+        btnIngresar.setUI(new BasicButtonUI());
+        instalarHoverPrincipal(btnIngresar);
 
         JLabel lblSeparador = new JLabel("──────────  O  ──────────");
         lblSeparador.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -87,6 +96,12 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
         btnCrearCuenta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         btnCrearCuenta.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnCrearCuenta.setFocusPainted(false);
+        btnCrearCuenta.setOpaque(true);
+        btnCrearCuenta.setContentAreaFilled(true);
+        btnCrearCuenta.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnCrearCuenta.setHorizontalAlignment(SwingConstants.CENTER);
+        btnCrearCuenta.setUI(new BasicButtonUI());
+        instalarHoverPrincipal(btnCrearCuenta);
 
         panelCentral.add(lblLogo);
         panelCentral.add(Box.createVerticalStrut(8));
@@ -112,6 +127,28 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
         panelCentral.add(Box.createVerticalStrut(20));
 
         panelCentral.add(btnCrearCuenta);
+        panelCentral.add(Box.createVerticalStrut(22));
+
+        JLabel demo = new JLabel(
+        "<html><div style='text-align:center;'>"
+        + "<b>Cuentas de prueba</b><br>"
+        + "maria_demo · carlos_demo · sofia_demo<br>"
+        + "Contraseña: <b>Demo1234!</b>"
+        + "</div></html>",
+        SwingConstants.CENTER
+        );
+
+        demo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        demo.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+
+        demo.setHorizontalAlignment(SwingConstants.CENTER);
+        demo.setVerticalAlignment(SwingConstants.CENTER);
+
+        demo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        demo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 65));
+        demo.setPreferredSize(new Dimension(350, 65));
+
+        panelCentral.add(demo);
 
         add(panelCentral);
     }
@@ -156,12 +193,21 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
 
         btnIngresar.setBackground(TemaInsta.BOTON);
         btnIngresar.setForeground(TemaInsta.BOTON_TEXTO);
+        btnIngresar.setBorder(BorderFactory.createEmptyBorder(9, 12, 9, 12));
 
-        btnCrearCuenta.setBackground(TemaInsta.INPUT);
-        btnCrearCuenta.setForeground(TemaInsta.TEXTO);
+        btnCrearCuenta.setBackground(TemaInsta.BOTON);
+        btnCrearCuenta.setForeground(Color.WHITE);
+        btnCrearCuenta.setBorder(BorderFactory.createEmptyBorder(9, 12, 9, 12));
 
         revalidate();
         repaint();
+    }
+
+    private void instalarHoverPrincipal(JButton boton) {
+        boton.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { boton.setBackground(new Color(0, 125, 210)); }
+            @Override public void mouseExited(MouseEvent e) { boton.setBackground(TemaInsta.BOTON); }
+        });
     }
 
     private void cambiarLabels(Container contenedor) {

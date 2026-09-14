@@ -1,11 +1,18 @@
 
 package insta.interfaz;
 
+import interfaz.DialogosWindows;
+
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import javax.swing.*;
 import javax.swing.border.*;
 import red.Cliente;
 import red.Respuesta;
+import hilos.HiloNotificaciones;
+import insta.modelo.Mensaje;
+import estructuras.ListaEnlazada;
 
 public class InstaPanel extends JPanel {
 
@@ -24,7 +31,7 @@ public class InstaPanel extends JPanel {
     private JButton btnInbox;
     private JButton btnEditarPerfil;
     private JButton btnCerrarSesion;
-    
+
     private TimelinePanel timelinePanel;
     private PerfilPanel perfilPanel;
     private PublicarPanel publicarPanel;
@@ -36,6 +43,7 @@ public class InstaPanel extends JPanel {
 
     private JLabel lblLogo;
     private JLabel lblUsuario;
+    private JLabel lblNotificacion;
 
     private JTextField txtBusquedaGeneral;
 
@@ -44,9 +52,15 @@ public class InstaPanel extends JPanel {
     private Runnable accionCerrar;
     private Cliente cliente;
     private String usuarioActual;
-    
+    private HiloNotificaciones hiloNotificaciones;
+    private int mensajesPendientes;
+    private int mencionesPendientes;
+    private Popup popupNotificacion;
+    private Timer timerPopupNotificacion;
+
     public InstaPanel(Cliente cliente) {
         this.cliente = cliente;
+
         TemaInsta.cambiarTema(false);
 
         setLayout(new BorderLayout());
@@ -56,16 +70,24 @@ public class InstaPanel extends JPanel {
         crearContenido();
         configurarEventos();
         aplicarTema();
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                actualizarModoResponsive();
+            }
+        });
     }
 
     private void crearMenu() {
         panelMenu = new JPanel();
         panelMenu.setLayout(new BoxLayout(panelMenu, BoxLayout.Y_AXIS));
         panelMenu.setPreferredSize(new Dimension(240, 0));
-        panelMenu.setBorder(new EmptyBorder(25, 15, 20, 15));
-        
+
         panelMenu.setBorder(BorderFactory.createCompoundBorder(
-        BorderFactory.createMatteBorder(0, 0, 0, 1, TemaInsta.BORDE), new EmptyBorder(25, 15, 20, 15)));
+                BorderFactory.createMatteBorder(0, 0, 0, 1, TemaInsta.BORDE),
+                new EmptyBorder(25, 15, 20, 15)
+        ));
+
         lblLogo = new JLabel("INSTA+");
         lblLogo.setFont(new Font("Arial", Font.BOLD, 27));
         lblLogo.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -84,23 +106,31 @@ public class InstaPanel extends JPanel {
 
         panelMenu.add(btnInicio);
         panelMenu.add(Box.createVerticalStrut(5));
+
         panelMenu.add(btnBuscar);
         panelMenu.add(Box.createVerticalStrut(5));
+
         panelMenu.add(btnHashtag);
         panelMenu.add(Box.createVerticalStrut(5));
+
         panelMenu.add(btnInbox);
         panelMenu.add(Box.createVerticalStrut(5));
+
         panelMenu.add(btnInteracciones);
         panelMenu.add(Box.createVerticalStrut(5));
+
         panelMenu.add(btnPublicar);
         panelMenu.add(Box.createVerticalStrut(5));
+
         panelMenu.add(btnPerfil);
         panelMenu.add(Box.createVerticalStrut(5));
+
         panelMenu.add(btnEditarPerfil);
 
         panelMenu.add(Box.createVerticalGlue());
 
         btnCerrarSesion = crearBotonMenu("↪   Cerrar sesión");
+
         panelMenu.add(btnCerrarSesion);
 
         add(panelMenu, BorderLayout.WEST);
@@ -108,16 +138,19 @@ public class InstaPanel extends JPanel {
 
     private JButton crearBotonMenu(String texto) {
         JButton boton = new JButton(texto);
+
         boton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
         boton.setPreferredSize(new Dimension(210, 48));
         boton.setHorizontalAlignment(SwingConstants.LEFT);
-        boton.setFont(new Font("Arial", Font.PLAIN, 15));
+        boton.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 15));
         boton.setFocusPainted(false);
         boton.setBorder(new EmptyBorder(10, 12, 10, 12));
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         boton.setOpaque(true);
+        boton.setContentAreaFilled(true);
 
         boton.addMouseListener(new java.awt.event.MouseAdapter() {
+
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 if (TemaInsta.oscuro) {
@@ -132,14 +165,19 @@ public class InstaPanel extends JPanel {
                 boton.setBackground(TemaInsta.FONDO);
             }
         });
+
         return boton;
     }
 
     private void crearBarraSuperior() {
         panelSuperior = new JPanel(new BorderLayout(20, 0));
         panelSuperior.setPreferredSize(new Dimension(0, 70));
-        panelSuperior.setBorder(new EmptyBorder(12, 25, 12, 25));
-        panelSuperior.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, TemaInsta.BORDE), new EmptyBorder(12, 25, 12, 25)));
+
+        panelSuperior.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, TemaInsta.BORDE),
+                new EmptyBorder(12, 25, 12, 25)
+        ));
+
         txtBusquedaGeneral = new JTextField();
         txtBusquedaGeneral.setFont(new Font("Arial", Font.PLAIN, 14));
         txtBusquedaGeneral.setBorder(new EmptyBorder(10, 15, 10, 15));
@@ -149,16 +187,21 @@ public class InstaPanel extends JPanel {
         derecha.setOpaque(false);
 
         JLabel lblSol = new JLabel("☀");
-        lblSol.setFont(new Font("Arial", Font.PLAIN, 20));
+        lblSol.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 20));
 
         switchTema = new SwitchTema();
 
         JLabel lblLuna = new JLabel("☾");
-        lblLuna.setFont(new Font("Arial", Font.PLAIN, 20));
+        lblLuna.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 20));
+
+        lblNotificacion = new JLabel("");
+        lblNotificacion.setFont(new Font("Arial", Font.BOLD, 12));
+        lblNotificacion.setForeground(new Color(220, 45, 70));
 
         lblUsuario = new JLabel("@usuario");
         lblUsuario.setFont(new Font("Arial", Font.BOLD, 14));
 
+        derecha.add(lblNotificacion);
         derecha.add(lblSol);
         derecha.add(switchTema);
         derecha.add(lblLuna);
@@ -173,26 +216,46 @@ public class InstaPanel extends JPanel {
 
     private void crearContenido() {
         cardLayout = new CardLayout();
+
         panelContenido = new JPanel(cardLayout);
 
         timelinePanel = new TimelinePanel(cliente);
-        perfilPanel = new PerfilPanel();
+        perfilPanel = new PerfilPanel(cliente);
         publicarPanel = new PublicarPanel(cliente);
-        interaccionesPanel = new InteraccionesPanel();
+        interaccionesPanel = new InteraccionesPanel(cliente);
         buscarPanel = new BuscarPanel(cliente);
-        hashtagPanel = new HashtagPanel();
-        inboxPanel = new InboxPanel();
-        editarPerfilPanel = new EditarPerfilPanel();
-        
+        hashtagPanel = new HashtagPanel(cliente);
+        inboxPanel = new InboxPanel(cliente);
+        editarPerfilPanel = new EditarPerfilPanel(cliente);
+        editarPerfilPanel.setAccionPerfilActualizado(() -> {
+            Respuesta.DatosUsuario actual = cliente.getUsuarioActual();
+            if (actual != null) {
+                inboxPanel.invalidarAvatar(actual.getUsername());
+                cargarPerfil(actual.getUsername());
+            }
+        });
+
         publicarPanel.setAccionPublicacionCreada(() -> {
             timelinePanel.cargarTimeline();
-            cargarPerfil(usuarioActual);
+
+            if (usuarioActual != null) {
+                cargarPerfil(usuarioActual);
+            }
+
             mostrarPanel("TIMELINE");
         });
-        
+
         buscarPanel.setAccionSeguimientoActualizado(() -> {
             timelinePanel.cargarTimeline();
-            cargarPerfil(usuarioActual);
+
+            if (usuarioActual != null) {
+                cargarPerfil(usuarioActual);
+            }
+        });
+
+        buscarPanel.setAccionAbrirPerfil(username -> {
+            cargarPerfil(username);
+            mostrarPanel("PERFIL");
         });
 
         panelContenido.add(timelinePanel, "TIMELINE");
@@ -214,21 +277,200 @@ public class InstaPanel extends JPanel {
             mostrarPanel("TIMELINE");
             timelinePanel.cargarTimeline();
         });
-        btnPerfil.addActionListener(e -> mostrarPanel("PERFIL"));
-        btnPublicar.addActionListener(e -> mostrarPanel("PUBLICAR"));
-        btnInteracciones.addActionListener(e -> mostrarPanel("INTERACCIONES"));
+
+        btnPerfil.addActionListener(e -> {
+            if (usuarioActual != null) {
+                cargarPerfil(usuarioActual);
+            }
+
+            mostrarPanel("PERFIL");
+        });
+
+        btnPublicar.addActionListener(e -> {
+            publicarPanel.prepararPublicacion();
+            mostrarPanel("PUBLICAR");
+        });
+        btnInteracciones.addActionListener(e -> {
+            mencionesPendientes = 0;
+            actualizarContadoresNotificacion();
+            interaccionesPanel.cargarMenciones();
+            mostrarPanel("INTERACCIONES");
+        });
         btnBuscar.addActionListener(e -> mostrarPanel("BUSCAR"));
         btnHashtag.addActionListener(e -> mostrarPanel("HASHTAG"));
-        btnInbox.addActionListener(e -> mostrarPanel("INBOX"));
-        btnEditarPerfil.addActionListener(e -> mostrarPanel("EDITAR"));
-
+        btnInbox.addActionListener(e -> {
+            mensajesPendientes = 0;
+            actualizarContadoresNotificacion();
+            lblNotificacion.setText("");
+            ocultarPopupNotificacion();
+            inboxPanel.cargarInbox();
+            mostrarPanel("INBOX");
+        });
+        btnEditarPerfil.addActionListener(e -> {
+            editarPerfilPanel.cargarDatos();
+            mostrarPanel("EDITAR");
+        });
         btnCerrarSesion.addActionListener(e -> cerrarSesion());
+
+        txtBusquedaGeneral.addActionListener(e -> ejecutarBusquedaGeneral());
+
+        perfilPanel.getBtnSeguir().addActionListener(e -> cambiarSeguimiento());
 
         switchTema.addPropertyChangeListener("activado", e -> {
             boolean oscuro = switchTema.isActivado();
+
             TemaInsta.cambiarTema(oscuro);
+
             aplicarTema();
         });
+    }
+
+    private void ejecutarBusquedaGeneral() {
+        String texto = txtBusquedaGeneral.getText().trim();
+        if (texto.isEmpty()) return;
+
+        if (texto.startsWith("#")) {
+            String hashtag = texto.substring(1).trim();
+            if (hashtag.isEmpty()) return;
+            hashtagPanel.getTxtHashtag().setText(hashtag);
+            mostrarPanel("HASHTAG");
+            hashtagPanel.getBtnBuscar().doClick();
+        } else {
+            String usuario = texto.startsWith("@") ? texto.substring(1).trim() : texto;
+            if (usuario.isEmpty()) return;
+            buscarPanel.getTxtBusqueda().setText(usuario);
+            mostrarPanel("BUSCAR");
+            buscarPanel.getBtnBuscar().doClick();
+        }
+    }
+
+    private void cambiarSeguimiento() {
+        if (usuarioPerfilActual == null) {
+            return;
+        }
+
+        if (usuarioActual != null && usuarioPerfilActual.equalsIgnoreCase(usuarioActual)) {
+            return;
+        }
+
+        JButton boton = perfilPanel.getBtnSeguir();
+
+        boolean dejarDeSeguir = boton.getText().equalsIgnoreCase("Dejar de seguir");
+
+        if (dejarDeSeguir) {
+            int opcion = DialogosWindows.showConfirmDialog(this, "¿Dejar de seguir a @" + usuarioPerfilActual + "?", "Dejar de seguir", JOptionPane.YES_NO_OPTION);
+            if (opcion != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+
+        boton.setEnabled(false);
+
+        SwingWorker<Respuesta, Void> trabajador = new SwingWorker<>() {
+
+            @Override
+            protected Respuesta doInBackground() throws Exception {
+                if (dejarDeSeguir) {
+                    return cliente.dejarDeSeguir(usuarioPerfilActual);
+                }
+
+                return cliente.seguir(usuarioPerfilActual);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Respuesta respuesta = get();
+
+                    if (respuesta.esExitosa()) {
+                        cargarPerfil(usuarioPerfilActual);
+                        timelinePanel.cargarTimeline();
+                    } else {
+                        DialogosWindows.showMessageDialog(
+                                InstaPanel.this,
+                                respuesta.getMensaje(),
+                                "Seguimiento",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+
+                } catch (Exception e) {
+                    DialogosWindows.showMessageDialog(
+                            InstaPanel.this,
+                            "No se pudo actualizar el seguimiento.\n" + e.getMessage(),
+                            "Seguimiento",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+
+                boton.setEnabled(true);
+            }
+        };
+
+        trabajador.execute();
+    }
+
+    private void cargarPerfil(String username) {
+        if (username == null || username.isBlank()) {
+            return;
+        }
+
+        usuarioPerfilActual = username;
+
+        perfilPanel.mostrarCargando();
+
+        SwingWorker<Respuesta, Void> trabajador = new SwingWorker<>() {
+
+            @Override
+            protected Respuesta doInBackground() throws Exception {
+                return cliente.perfil(username);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Respuesta respuesta = get();
+
+                    if (respuesta.esExitosa() && respuesta.tieneUsuario()) {
+                        Respuesta.DatosUsuario usuario = respuesta.getUsuario();
+
+                        perfilPanel.mostrarUsuario(usuario);
+
+                        boolean esMiPerfil = usuarioActual != null && usuario.getUsername().equalsIgnoreCase(usuarioActual);
+
+                        perfilPanel.configurarComoPerfilPropio(esMiPerfil);
+
+                        perfilPanel.cargarPublicaciones(username);
+
+                    } else {
+                        DialogosWindows.showMessageDialog(
+                                InstaPanel.this,
+                                respuesta.getMensaje(),
+                                "Perfil",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+
+                } catch (Exception e) {
+                    DialogosWindows.showMessageDialog(
+                            InstaPanel.this,
+                            "No se pudo cargar el perfil.\n" + e.getMessage(),
+                            "Perfil",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+        };
+
+        trabajador.execute();
+    }
+
+    private void actualizarModoResponsive() {
+        boolean movil = getWidth() > 0 && getWidth() < 900;
+        TemaInsta.cambiarModoMobile(movil);
+        panelMenu.setPreferredSize(new Dimension(movil ? 185 : 240, 0));
+        txtBusquedaGeneral.setPreferredSize(new Dimension(movil ? 220 : 350, 40));
+        revalidate();
     }
 
     private void aplicarTema() {
@@ -260,6 +502,9 @@ public class InstaPanel extends JPanel {
         for (JButton boton : botones) {
             boton.setBackground(TemaInsta.FONDO);
             boton.setForeground(TemaInsta.TEXTO);
+            boton.setOpaque(true);
+            boton.setContentAreaFilled(true);
+            boton.setBorder(new EmptyBorder(10, 12, 10, 12));
         }
 
         timelinePanel.aplicarTema();
@@ -271,46 +516,12 @@ public class InstaPanel extends JPanel {
         inboxPanel.aplicarTema();
         editarPerfilPanel.aplicarTema();
 
+        // Última pasada: Windows Look & Feel puede conservar fondos claros
+        // aunque el texto ya haya cambiado a blanco.
+        TemaComponentes.corregirContraste(this);
+
         revalidate();
         repaint();
-    }
-
-    private void actualizarTemaComponentes(Container contenedor) {
-        for (Component componente : contenedor.getComponents()) {
-
-            if (componente instanceof JPanel panel) {
-                panel.setBackground(TemaInsta.FONDO);
-            }
-
-            if (componente instanceof JLabel label) {
-                label.setForeground(TemaInsta.TEXTO);
-            }
-
-            if (componente instanceof JTextField campo) {
-                campo.setBackground(TemaInsta.INPUT);
-                campo.setForeground(TemaInsta.TEXTO);
-                campo.setCaretColor(TemaInsta.TEXTO);
-            }
-
-            if (componente instanceof JTextArea area) {
-                area.setBackground(TemaInsta.INPUT);
-                area.setForeground(TemaInsta.TEXTO);
-                area.setCaretColor(TemaInsta.TEXTO);
-            }
-
-            if (componente instanceof JButton boton) {
-                boton.setBackground(TemaInsta.FONDO_SECUNDARIO);
-                boton.setForeground(TemaInsta.TEXTO);
-            }
-
-            if (componente instanceof JScrollPane scroll) {
-                scroll.getViewport().setBackground(TemaInsta.FONDO);
-            }
-
-            if (componente instanceof Container interno) {
-                actualizarTemaComponentes(interno);
-            }
-        }
     }
 
     public void mostrarPanel(String panel) {
@@ -319,71 +530,226 @@ public class InstaPanel extends JPanel {
 
     public void setUsuario(String username) {
         usuarioActual = username;
-        lblUsuario.setText("@" + username);
 
+        lblUsuario.setText("@" + username);
+        
+        inboxPanel.setUsuarioActual(username);
+        iniciarNotificaciones();
         cargarPerfil(username);
         timelinePanel.cargarTimeline();
     }
 
     private void cerrarSesion() {
-        int respuesta = JOptionPane.showConfirmDialog(this, "¿Desea cerrar sesión de INSTA+?", "Cerrar sesión", JOptionPane.YES_NO_OPTION);
+        int respuesta = DialogosWindows.showConfirmDialog(
+                this,
+                "¿Desea cerrar sesión de INSTA+?",
+                "Cerrar sesión",
+                JOptionPane.YES_NO_OPTION
+        );
 
         if (respuesta == JOptionPane.YES_OPTION) {
+            cerrarNotificaciones();
             if (accionCerrar != null) {
                 accionCerrar.run();
             }
         }
     }
 
-    public void setAccionCerrar(Runnable accionCerrar) {
-        this.accionCerrar = accionCerrar;
+
+    private void iniciarNotificaciones() {
+        cerrarNotificaciones();
+        mensajesPendientes = 0;
+        mencionesPendientes = 0;
+        actualizarContadoresNotificacion();
+        hiloNotificaciones = new HiloNotificaciones(
+                cliente,
+                nuevos -> SwingUtilities.invokeLater(() -> mostrarNotificacionMensajes(nuevos)),
+                nuevas -> SwingUtilities.invokeLater(() -> mostrarNotificacionMenciones(nuevas)),
+                error -> {
+                    if (cliente.tieneSesion()) System.err.println("Notificaciones INSTA+: " + error.getMessage());
+                }
+        );
+        hiloNotificaciones.iniciar();
     }
-    
-    private void cargarPerfil(String username) {
-        usuarioPerfilActual = username;
 
-        SwingWorker<Respuesta, Void> trabajador = new SwingWorker<>() {
+    private void mostrarNotificacionMensajes(ListaEnlazada<Mensaje> nuevos) {
+        if (nuevos == null || nuevos.isEmpty()) return;
+        mensajesPendientes += nuevos.size();
+        actualizarContadoresNotificacion();
+        Mensaje ultimo = nuevos.obtener(nuevos.size() - 1);
+        lblNotificacion.setText("✉ Nuevo mensaje de @" + ultimo.getEmisor());
+        inboxPanel.refrescarEnTiempoReal(nuevos);
+        if (!inboxPanel.isShowing()) {
+            mostrarPopupMensaje(ultimo);
+        }
+        ocultarAvisoLuego();
+    }
 
+    private void mostrarNotificacionMenciones(ListaEnlazada<insta.modelo.Publicacion> nuevas) {
+        if (nuevas == null || nuevas.isEmpty()) return;
+        mencionesPendientes += nuevas.size();
+        actualizarContadoresNotificacion();
+        insta.modelo.Publicacion ultima = nuevas.obtener(nuevas.size() - 1);
+        lblNotificacion.setText("@ Te mencionó @" + ultima.getAutor());
+        if (interaccionesPanel.isShowing()) {
+            interaccionesPanel.cargarMenciones();
+        } else {
+            mostrarPopupMencion(ultima);
+        }
+        ocultarAvisoLuego();
+    }
+
+    private void mostrarPopupMensaje(Mensaje mensaje) {
+        String contenido = mensaje.esTexto() ? mensaje.getContenido() : "Te envió un sticker";
+        mostrarPopupNotificacion("Nuevo mensaje", mensaje.getEmisor(), contenido, () -> {
+            mensajesPendientes = 0;
+            actualizarContadoresNotificacion();
+            mostrarPanel("INBOX");
+            inboxPanel.abrirConversacionDesdeNotificacion(mensaje.getEmisor());
+        });
+    }
+
+    private void mostrarPopupMencion(insta.modelo.Publicacion publicacion) {
+        String contenido = publicacion.getContenido();
+        mostrarPopupNotificacion("Nueva mención", publicacion.getAutor(), contenido, () -> {
+            mencionesPendientes = 0;
+            actualizarContadoresNotificacion();
+            interaccionesPanel.cargarMenciones();
+            mostrarPanel("INTERACCIONES");
+        });
+    }
+
+    private void mostrarPopupNotificacion(String titulo, String username, String detalle, Runnable accion) {
+        ocultarPopupNotificacion();
+        if (!isShowing()) return;
+
+        JPanel tarjeta = new JPanel(new BorderLayout(12, 0));
+        tarjeta.setPreferredSize(new Dimension(340, 86));
+        tarjeta.setBackground(TemaInsta.TARJETA);
+        tarjeta.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(TemaInsta.BORDE),
+                new EmptyBorder(12, 14, 12, 14)
+        ));
+        tarjeta.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        JLabel avatar = new JLabel(username == null || username.isBlank() ? "?" : username.substring(0, 1).toUpperCase(), SwingConstants.CENTER);
+        avatar.setPreferredSize(new Dimension(46, 46));
+        avatar.setOpaque(true);
+        avatar.setBackground(TemaInsta.INPUT);
+        avatar.setForeground(TemaInsta.TEXTO);
+        avatar.setFont(new Font("Arial", Font.BOLD, 16));
+        avatar.setBorder(BorderFactory.createLineBorder(TemaInsta.BORDE));
+
+        JPanel textos = new JPanel();
+        textos.setOpaque(false);
+        textos.setLayout(new BoxLayout(textos, BoxLayout.Y_AXIS));
+        JLabel lblTitulo = new JLabel(titulo + " · @" + username);
+        lblTitulo.setFont(new Font("Arial", Font.BOLD, 13));
+        lblTitulo.setForeground(TemaInsta.TEXTO);
+        JLabel lblDetalle = new JLabel("<html><div style='width:235px;'>" + TarjetaPublicacionPanel.escaparHtml(recortar(detalle, 75)) + "</div></html>");
+        lblDetalle.setFont(new Font("Arial", Font.PLAIN, 12));
+        lblDetalle.setForeground(TemaInsta.TEXTO_SECUNDARIO);
+        textos.add(lblTitulo);
+        textos.add(Box.createVerticalStrut(5));
+        textos.add(lblDetalle);
+
+        tarjeta.add(avatar, BorderLayout.WEST);
+        tarjeta.add(textos, BorderLayout.CENTER);
+        agregarAccionClick(tarjeta, accion);
+        cargarAvatarPopup(username, avatar);
+
+        try {
+            Point ubicacion = getLocationOnScreen();
+            int x = ubicacion.x + getWidth() - tarjeta.getPreferredSize().width - 24;
+            int y = ubicacion.y + 82;
+            popupNotificacion = PopupFactory.getSharedInstance().getPopup(this, tarjeta, x, y);
+            popupNotificacion.show();
+            timerPopupNotificacion = new Timer(6500, e -> ocultarPopupNotificacion());
+            timerPopupNotificacion.setRepeats(false);
+            timerPopupNotificacion.start();
+        } catch (IllegalComponentStateException ignored) {
+        }
+    }
+
+    private void cargarAvatarPopup(String username, JLabel avatar) {
+        if (username == null || username.isBlank()) return;
+        SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
             @Override
-            protected Respuesta doInBackground() throws Exception {
-                return cliente.perfil(username);
+            protected ImageIcon doInBackground() throws Exception {
+                Respuesta perfil = cliente.perfil(username);
+                if (!perfil.esExitosa() || !perfil.tieneUsuario()) return null;
+                String ruta = perfil.getUsuario().getRutaFotoPerfil();
+                if (ruta == null || ruta.isBlank()) return null;
+                Respuesta imagen = cliente.descargarImagen(ruta);
+                if (!imagen.esExitosa() || imagen.getArchivo() == null) return null;
+                return ImagenUI.ajustar(imagen.getArchivo(), 46, 46);
             }
 
             @Override
             protected void done() {
                 try {
-                    Respuesta respuesta = get();
-
-                    if (respuesta.esExitosa() && respuesta.tieneUsuario()) {
-                        Respuesta.DatosUsuario usuario = respuesta.getUsuario();
-
-                        perfilPanel.mostrarUsuario(usuario);
-
-                        boolean esMiPerfil = usuario.getUsername().equalsIgnoreCase(usuarioActual);
-
-                        perfilPanel.configurarComoPerfilPropio(esMiPerfil);
-
-                    } else {
-                        JOptionPane.showMessageDialog(
-                                InstaPanel.this,
-                                respuesta.getMensaje(),
-                                "Perfil",
-                                JOptionPane.ERROR_MESSAGE
-                        );
+                    ImageIcon icono = get();
+                    if (icono != null) {
+                        avatar.setText("");
+                        avatar.setIcon(icono);
                     }
-
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(
-                            InstaPanel.this,
-                            "No se pudo cargar el perfil.\n" + e.getMessage(),
-                            "Perfil",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                } catch (Exception ignored) {
                 }
             }
         };
-
-        trabajador.execute();
+        worker.execute();
     }
 
+    private void agregarAccionClick(Component componente, Runnable accion) {
+        java.awt.event.MouseAdapter listener = new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                ocultarPopupNotificacion();
+                accion.run();
+            }
+        };
+        componente.addMouseListener(listener);
+        if (componente instanceof Container contenedor) {
+            for (Component hijo : contenedor.getComponents()) agregarAccionClick(hijo, accion);
+        }
+    }
+
+    private String recortar(String texto, int maximo) {
+        String valor = texto == null ? "" : texto.trim().replaceAll("\\s+", " ");
+        return valor.length() <= maximo ? valor : valor.substring(0, maximo - 1) + "…";
+    }
+
+    private void ocultarPopupNotificacion() {
+        if (timerPopupNotificacion != null) {
+            timerPopupNotificacion.stop();
+            timerPopupNotificacion = null;
+        }
+        if (popupNotificacion != null) {
+            popupNotificacion.hide();
+            popupNotificacion = null;
+        }
+    }
+
+    private void actualizarContadoresNotificacion() {
+        btnInbox.setText(mensajesPendientes > 0 ? "✉   Mensajes (" + mensajesPendientes + ")" : "✉   Mensajes");
+        btnInteracciones.setText(mencionesPendientes > 0 ? "♡   Notificaciones (" + mencionesPendientes + ")" : "♡   Notificaciones");
+    }
+
+    private void ocultarAvisoLuego() {
+        Timer timer = new Timer(5000, e -> lblNotificacion.setText(""));
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+    private void cerrarNotificaciones() {
+        ocultarPopupNotificacion();
+        if (hiloNotificaciones != null) {
+            hiloNotificaciones.close();
+            hiloNotificaciones = null;
+        }
+    }
+
+    public void setAccionCerrar(Runnable accionCerrar) {
+        this.accionCerrar = accionCerrar;
+    }
 }

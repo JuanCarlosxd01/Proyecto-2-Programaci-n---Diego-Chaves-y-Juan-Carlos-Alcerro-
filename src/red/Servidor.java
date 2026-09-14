@@ -309,21 +309,4 @@ public class Servidor implements AutoCloseable {
 
         sesiones.clear();
     }
-
-    public static void main(String[] args) {
-        try (Servidor servidor = new Servidor()) {
-            Runtime.getRuntime().addShutdownHook(
-                    new Thread(servidor::close)
-            );
-
-            System.out.println(
-                    "INSTA+ en puerto " + servidor.getPuerto()
-            );
-
-            servidor.iniciar();
-
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-        }
-    }
 }

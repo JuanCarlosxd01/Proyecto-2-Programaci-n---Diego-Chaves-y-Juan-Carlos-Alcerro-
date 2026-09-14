@@ -57,12 +57,10 @@ public class BusquedaServicio {
                     new ListaEnlazada<>();
 
             for (UsuarioInsta usuario : a.usuarios()) {
-                if (usuario.estaActiva()
-                        && usuario.getUsername().contains(texto)) {
-                    resultado.agregar(a.perfilServicio.datos(
-                            actor,
-                            usuario.getUsername()
-                    ));
+                String username = usuario.getUsername() == null ? "" : usuario.getUsername().toLowerCase(Locale.ROOT);
+                String nombre = usuario.getNombreCompleto() == null ? "" : usuario.getNombreCompleto().toLowerCase(Locale.ROOT);
+                if (usuario.estaActiva() && (username.contains(texto) || nombre.contains(texto))) {
+                    resultado.agregar(a.perfilServicio.datos(actor, usuario.getUsername()));
                 }
             }
 
@@ -87,13 +85,17 @@ public class BusquedaServicio {
         for (Publicacion publicacion :
                 a.publicacionServicio.todas()) {
 
-            if ((!menciones
-                    || !publicacion.getAutor().equals(actor))
-                    && contiene(
-                            publicacion.getContenido(),
-                            menciones ? '@' : '#',
-                            valor
-                    )) {
+            boolean coincidePublicacion = contiene(publicacion.getContenido(), menciones ? '@' : '#', valor);
+            boolean coincideComentario = false;
+            if (menciones) {
+                for (Comentario comentario : publicacion.getComentarios()) {
+                    if (!comentario.getAutor().equals(actor) && comentario.esTexto() && contiene(comentario.getTexto(), '@', valor)) {
+                        coincideComentario = true;
+                        break;
+                    }
+                }
+            }
+            if ((!menciones || !publicacion.getAutor().equals(actor) || coincideComentario) && (coincidePublicacion || coincideComentario)) {
                 resultado.agregarUnico(publicacion);
             }
         }

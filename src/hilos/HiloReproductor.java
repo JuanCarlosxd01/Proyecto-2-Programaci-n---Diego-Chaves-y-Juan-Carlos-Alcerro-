@@ -3,6 +3,7 @@ package hilos;
 
 import javax.swing.JSlider;
 import javax.swing.SwingUtilities;
+import java.util.function.BiConsumer;
 import multimedia.ReproductorMusica;
 
 public class HiloReproductor extends Thread {
@@ -11,6 +12,7 @@ public class HiloReproductor extends Thread {
     private JSlider progreso;
     private volatile boolean activo;
     private Runnable accionCancionTerminada;
+    private BiConsumer<Long, Long> accionTiempoActualizado;
     private boolean finalProcesado;
 
     public HiloReproductor(ReproductorMusica reproductor, JSlider progreso) {
@@ -32,6 +34,7 @@ public class HiloReproductor extends Thread {
 
                     SwingUtilities.invokeLater(() -> {
                         progreso.setValue(porcentaje);
+                        if (accionTiempoActualizado != null) accionTiempoActualizado.accept(actual, duracion);
                     });
                 }
 
@@ -59,6 +62,10 @@ public class HiloReproductor extends Thread {
 
     public void setAccionCancionTerminada(Runnable accion) {
         this.accionCancionTerminada = accion;
+    }
+
+    public void setAccionTiempoActualizado(BiConsumer<Long, Long> accion) {
+        this.accionTiempoActualizado = accion;
     }
 
     public void detenerHilo() {

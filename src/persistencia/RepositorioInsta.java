@@ -17,6 +17,7 @@ public final class RepositorioInsta implements AutoCloseable {
 
     public record Cambio(String ruta, Serializable valor)
             implements Serializable {
+        private static final long serialVersionUID = 1L;
     }
 
     private final Path raiz;

@@ -1,16 +1,11 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package multimedia;
+
 import com.mpatric.mp3agic.ID3v1;
 import com.mpatric.mp3agic.ID3v2;
 import com.mpatric.mp3agic.Mp3File;
 import java.io.File;
-/**
- *
- * @author diego
- */
+
 public class LectorMetadataMP3 {
 
     public static MetadataCancion leer(File archivo) {
@@ -32,12 +27,16 @@ public class LectorMetadataMP3 {
                 metadata.setArtista(tag.getArtist());
                 metadata.setAlbum(tag.getAlbum());
                 metadata.setAnio(tag.getYear());
+                String detalle = tag.getComment();
+                if ((detalle == null || detalle.isBlank()) && tag.getGenreDescription() != null) detalle = tag.getGenreDescription();
+                metadata.setDescripcion(detalle);
 
                 byte[] imagen = tag.getAlbumImage();
 
                 if (imagen != null && imagen.length > 0) {
                     metadata.setCaratula(imagen);
                 }
+
             } else if (mp3.hasId3v1Tag()) {
                 ID3v1 tag = mp3.getId3v1Tag();
 
@@ -45,12 +44,14 @@ public class LectorMetadataMP3 {
                 metadata.setArtista(tag.getArtist());
                 metadata.setAlbum(tag.getAlbum());
                 metadata.setAnio(tag.getYear());
+                metadata.setDescripcion(tag.getComment());
             }
+            if (metadata.getDescripcion().isBlank()) {
+                metadata.setDescripcion(mp3.getBitrate() + " kbps · " + mp3.getSampleRate() + " Hz · " + mp3.getChannelMode());
+            }
+
         } catch (Exception e) {
-            System.err.println(
-                    "No se pudieron leer los metadatos de "
-                    + archivo.getName() + ": " + e.getMessage()
-            );
+            System.err.println("No se pudieron leer los metadatos de " + archivo.getName() + ": " + e.getMessage());
         }
 
         return metadata;

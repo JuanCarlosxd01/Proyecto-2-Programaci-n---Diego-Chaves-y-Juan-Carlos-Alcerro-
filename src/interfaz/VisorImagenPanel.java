@@ -1,32 +1,17 @@
-
-
 package interfaz;
 
-import insta.interfaz.ImagenTemporal;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Image;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.*;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.SwingConstants;
+import javax.imageio.ImageIO;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import sistema.SeguridadArchivos;
+import javax.swing.plaf.basic.BasicButtonUI;
 
 public class VisorImagenPanel extends JPanel {
 
@@ -40,6 +25,7 @@ public class VisorImagenPanel extends JPanel {
     private ArrayList<File> imagenes;
     private int indiceActual;
     private Runnable accionCerrar;
+    private int solicitudImagen;
 
     public VisorImagenPanel(File carpeta) {
         imagenes = new ArrayList<>();
@@ -63,15 +49,10 @@ public class VisorImagenPanel extends JPanel {
     }
 
     private void crearInterfaz() {
-        lblNombre = new JLabel(
-                "Visor de imágenes",
-                SwingConstants.CENTER
-        );
-
+        lblNombre = new JLabel("Visor de imágenes", SwingConstants.CENTER);
         lblNombre.setForeground(Color.WHITE);
         lblNombre.setFont(new Font("Segoe UI", Font.PLAIN, 18));
         lblNombre.setBorder(new EmptyBorder(10, 10, 10, 10));
-
         add(lblNombre, BorderLayout.NORTH);
 
         panelVisor = new JPanel(new BorderLayout());
@@ -86,17 +67,14 @@ public class VisorImagenPanel extends JPanel {
         JPanel panelInferior = new JPanel(new BorderLayout());
         panelInferior.setBackground(new Color(35, 35, 35));
 
-        JPanel panelBotones = new JPanel(
-                new FlowLayout(FlowLayout.CENTER, 20, 8)
-        );
-
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 8));
         panelBotones.setOpaque(false);
 
         btnAnterior = new JButton("◀ Anterior");
         btnSiguiente = new JButton("Siguiente ▶");
 
-        btnAnterior.setFocusPainted(false);
-        btnSiguiente.setFocusPainted(false);
+        estilizarBotonOscuro(btnAnterior);
+        estilizarBotonOscuro(btnSiguiente);
 
         panelBotones.add(btnAnterior);
         panelBotones.add(btnSiguiente);
@@ -104,24 +82,14 @@ public class VisorImagenPanel extends JPanel {
         panelInferior.add(panelBotones, BorderLayout.NORTH);
 
         panelMiniaturas = new JPanel();
-        panelMiniaturas.setLayout(
-                new BoxLayout(panelMiniaturas, BoxLayout.X_AXIS)
-        );
-
+        panelMiniaturas.setLayout(new BoxLayout(panelMiniaturas, BoxLayout.X_AXIS));
         panelMiniaturas.setBackground(new Color(25, 25, 25));
         panelMiniaturas.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         scrollMiniaturas = new JScrollPane(panelMiniaturas);
         scrollMiniaturas.setPreferredSize(new Dimension(0, 125));
-
-        scrollMiniaturas.setHorizontalScrollBarPolicy(
-                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
-        );
-
-        scrollMiniaturas.setVerticalScrollBarPolicy(
-                JScrollPane.VERTICAL_SCROLLBAR_NEVER
-        );
-
+        scrollMiniaturas.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollMiniaturas.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         scrollMiniaturas.getHorizontalScrollBar().setUnitIncrement(15);
         scrollMiniaturas.setBorder(null);
 
@@ -162,10 +130,7 @@ public class VisorImagenPanel extends JPanel {
             return;
         }
 
-        Arrays.sort(
-                archivos,
-                (a, b) -> a.getName().compareToIgnoreCase(b.getName())
-        );
+        Arrays.sort(archivos, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
 
         for (File archivo : archivos) {
             if (archivo.isFile() && esImagen(archivo)) {
@@ -177,11 +142,7 @@ public class VisorImagenPanel extends JPanel {
     private boolean esImagen(File archivo) {
         String nombre = archivo.getName().toLowerCase();
 
-        return nombre.endsWith(".png")
-                || nombre.endsWith(".jpg")
-                || nombre.endsWith(".jpeg")
-                || nombre.endsWith(".gif")
-                || nombre.endsWith(".bmp");
+        return nombre.endsWith(".png") || nombre.endsWith(".jpg") || nombre.endsWith(".jpeg") || nombre.endsWith(".gif") || nombre.endsWith(".bmp");
     }
 
     private void crearMiniaturas() {
@@ -209,28 +170,36 @@ public class VisorImagenPanel extends JPanel {
     }
 
     private JButton crearMiniatura(File archivo, int indice) {
-        JButton boton = new JButton();
+        JButton boton = new JButton("...");
 
         boton.setPreferredSize(new Dimension(100, 95));
         boton.setMinimumSize(new Dimension(100, 95));
         boton.setMaximumSize(new Dimension(100, 95));
-        boton.setFocusPainted(false);
+        estilizarBotonOscuro(boton);
         boton.setBackground(new Color(45, 45, 45));
         boton.setToolTipText(archivo.getName());
 
-        JLabel miniatura = new JLabel("...", SwingConstants.CENTER);
+        SwingWorker<ImageIcon, Void> trabajador = new SwingWorker<>() {
+            @Override
+            protected ImageIcon doInBackground() throws Exception {
+                BufferedImage original = ImageIO.read(archivo);
+                if (original == null) return null;
+                return new ImageIcon(escalarImagen(original, 85, 75));
+            }
 
-        boton.setLayout(new BorderLayout());
-        boton.add(miniatura, BorderLayout.CENTER);
-
-        if (SeguridadArchivos.esPermitido(archivo)) {
-            ImagenTemporal.cargar(
-                    miniatura,
-                    () -> Files.readAllBytes(archivo.toPath()),
-                    85,
-                    75
-            );
-        }
+            @Override
+            protected void done() {
+                try {
+                    ImageIcon icono = get();
+                    boton.setText(icono == null ? "?" : "");
+                    boton.setIcon(icono);
+                } catch (Exception e) {
+                    boton.setText("?");
+                    boton.setIcon(null);
+                }
+            }
+        };
+        trabajador.execute();
 
         boton.addActionListener(e -> {
             indiceActual = indice;
@@ -241,41 +210,50 @@ public class VisorImagenPanel extends JPanel {
     }
 
     private void mostrarImagen() {
-        if (imagenes.isEmpty()
-                || indiceActual < 0
-                || indiceActual >= imagenes.size()) {
+        if (imagenes.isEmpty() || indiceActual < 0 || indiceActual >= imagenes.size()) {
             return;
         }
 
         File archivo = imagenes.get(indiceActual);
+        int indiceSolicitado = indiceActual;
+        int numeroSolicitud = ++solicitudImagen;
+        int ancho = panelVisor.getWidth() - 40;
+        int alto = panelVisor.getHeight() - 40;
+        if (ancho <= 100) ancho = 700;
+        if (alto <= 100) alto = 450;
+        final int anchoFinal = ancho;
+        final int altoFinal = alto;
 
-        if (!SeguridadArchivos.esPermitido(archivo)) {
-            return;
-        }
-
-        int ancho = Math.max(100, panelVisor.getWidth() - 40);
-        int alto = Math.max(100, panelVisor.getHeight() - 40);
-
-        ImagenTemporal.cargar(
-                lblImagen,
-                () -> Files.readAllBytes(archivo.toPath()),
-                ancho,
-                alto
-        );
-
-        lblNombre.setText(
-                archivo.getName() + "   "
-                + (indiceActual + 1) + " de " + imagenes.size()
-        );
-
+        lblImagen.setIcon(null);
+        lblImagen.setText("Cargando imagen...");
+        lblNombre.setText(archivo.getName() + "     " + (indiceSolicitado + 1) + " de " + imagenes.size());
         actualizarSeleccionMiniaturas();
+
+        SwingWorker<ImageIcon, Void> trabajador = new SwingWorker<>() {
+            @Override
+            protected ImageIcon doInBackground() throws Exception {
+                BufferedImage original = ImageIO.read(archivo);
+                if (original == null) return null;
+                return new ImageIcon(escalarImagen(original, anchoFinal, altoFinal));
+            }
+
+            @Override
+            protected void done() {
+                if (numeroSolicitud != solicitudImagen || indiceSolicitado != indiceActual) return;
+                try {
+                    ImageIcon icono = get();
+                    lblImagen.setIcon(icono);
+                    lblImagen.setText(icono == null ? "No se pudo cargar la imagen." : "");
+                } catch (Exception e) {
+                    lblImagen.setIcon(null);
+                    lblImagen.setText("Error al abrir " + archivo.getName());
+                }
+            }
+        };
+        trabajador.execute();
     }
 
-    private Image escalarImagen(
-            BufferedImage original,
-            int anchoMaximo,
-            int altoMaximo
-    ) {
+    private Image escalarImagen(BufferedImage original, int anchoMaximo, int altoMaximo) {
         int anchoOriginal = original.getWidth();
         int altoOriginal = original.getHeight();
 
@@ -290,11 +268,7 @@ public class VisorImagenPanel extends JPanel {
         int nuevoAncho = (int) (anchoOriginal * escala);
         int nuevoAlto = (int) (altoOriginal * escala);
 
-        return original.getScaledInstance(
-                nuevoAncho,
-                nuevoAlto,
-                Image.SCALE_SMOOTH
-        );
+        return original.getScaledInstance(nuevoAncho, nuevoAlto, Image.SCALE_SMOOTH);
     }
 
     private void siguiente() {
@@ -333,9 +307,7 @@ public class VisorImagenPanel extends JPanel {
                 JButton boton = (JButton) componente;
 
                 if (numeroBoton == indiceActual) {
-                    boton.setBorder(
-                            new LineBorder(new Color(0, 120, 215), 3)
-                    );
+                    boton.setBorder(new LineBorder(new Color(0, 120, 215), 3));
                 } else {
                     boton.setBorder(new LineBorder(Color.GRAY, 1));
                 }
@@ -354,4 +326,16 @@ public class VisorImagenPanel extends JPanel {
             accionCerrar.run();
         }
     }
+    private void estilizarBotonOscuro(JButton boton) {
+        boton.setUI(new BasicButtonUI());
+        boton.setFocusPainted(false);
+        boton.setOpaque(true);
+        boton.setContentAreaFilled(true);
+        boton.setBorderPainted(true);
+        boton.setBackground(new Color(55, 55, 55));
+        boton.setForeground(Color.WHITE);
+        boton.setBorder(BorderFactory.createLineBorder(new Color(85, 85, 85)));
+        boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
 }

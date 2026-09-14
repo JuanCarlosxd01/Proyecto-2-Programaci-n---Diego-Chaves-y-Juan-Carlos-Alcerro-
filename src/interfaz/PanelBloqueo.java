@@ -2,6 +2,7 @@
 package interfaz;
 
 import java.awt.*;
+import static java.awt.Component.CENTER_ALIGNMENT;
 import java.awt.event.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -16,7 +17,6 @@ public class PanelBloqueo extends JPanel{
     private boolean arrastrando = false;
     private boolean huboArrastre = false;
     private JButton btnApagar;
-    private ImageIcon iconoApagar = new ImageIcon(getClass().getResource("/Imagenes/botonApagar.png")); 
     
     public PanelBloqueo(PantallaInicioSesion pantalla){
         this.pantalla = pantalla;        
@@ -59,32 +59,59 @@ public class PanelBloqueo extends JPanel{
         
     }
     
-    private void crearBotonApagado(){
-        Image imagenEscalada = iconoApagar.getImage().getScaledInstance(25, 25, Image.SCALE_SMOOTH);
-        btnApagar = new JButton(new ImageIcon(imagenEscalada));
+    private void crearBotonApagado() {
+        btnApagar = new JButton("⏻") {
+            private boolean mouseEncima = false;
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        mouseEncima = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        mouseEncima = false;
+                        repaint();
+                    }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+
+                if (mouseEncima) {
+                    g2.setColor(new Color(255, 255, 255, 45));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                }
+
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btnApagar.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 28));
+        btnApagar.setForeground(Color.WHITE);
+
+        btnApagar.setPreferredSize(new Dimension(50, 50));
+        btnApagar.setMinimumSize(new Dimension(50, 50));
+        btnApagar.setMaximumSize(new Dimension(50, 50));
+
+        btnApagar.setHorizontalAlignment(SwingConstants.CENTER);
+        btnApagar.setVerticalAlignment(SwingConstants.CENTER);
+        btnApagar.setMargin(new Insets(0, 0, 3, 0));
+
         btnApagar.setContentAreaFilled(false);
         btnApagar.setBorderPainted(false);
         btnApagar.setFocusPainted(false);
         btnApagar.setOpaque(false);
-        
-        btnApagar.addActionListener(e ->{
+
+        btnApagar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnApagar.setToolTipText("Apagar");
+
+        btnApagar.addActionListener(e -> {
             System.exit(0);
-        });
-      
-        btnApagar.setCursor(
-            new Cursor(Cursor.HAND_CURSOR)
-        );
-        
-        btnApagar.addMouseListener(new MouseAdapter(){
-            @Override
-            public void mouseEntered(MouseEvent e){
-                btnApagar.setContentAreaFilled(true);
-                btnApagar.setBackground(new Color(255, 255, 255, 50));
-            }
-            @Override
-            public void mouseExited(MouseEvent e){
-                btnApagar.setContentAreaFilled(false);
-            }
         });
     }
     

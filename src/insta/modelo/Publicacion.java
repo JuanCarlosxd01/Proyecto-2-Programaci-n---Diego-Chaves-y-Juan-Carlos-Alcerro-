@@ -3,7 +3,11 @@ package insta.modelo;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public class Publicacion implements Serializable {
@@ -24,9 +28,11 @@ public class Publicacion implements Serializable {
     private final LocalDateTime fechaPublicacion;
 
     private final Tipo tipo;
-    private final String contenido;
+    private String contenido;
     private final String rutaAdjunto;
     private final String carpetaPersonal;
+    private Set<String> likes;
+    private List<Comentario> comentarios;
 
 
     private Publicacion(
@@ -73,6 +79,21 @@ public class Publicacion implements Serializable {
         this.contenido = texto;
         this.rutaAdjunto = adjunto;
         this.carpetaPersonal = carpeta;
+        this.likes = new LinkedHashSet<>();
+        this.comentarios = new ArrayList<>();
+    }
+
+
+    private Publicacion(String id, String autor, LocalDateTime fechaPublicacion, Tipo tipo, String contenido, String rutaAdjunto, String carpetaPersonal, Set<String> likes, List<Comentario> comentarios) {
+        this.id = id;
+        this.autor = autor;
+        this.fechaPublicacion = fechaPublicacion;
+        this.tipo = tipo;
+        this.contenido = contenido;
+        this.rutaAdjunto = rutaAdjunto;
+        this.carpetaPersonal = carpetaPersonal;
+        this.likes = new LinkedHashSet<>(likes);
+        this.comentarios = new ArrayList<>(comentarios);
     }
 
     public static Publicacion crearTexto(
@@ -215,6 +236,82 @@ public class Publicacion implements Serializable {
 
     public boolean tieneCarpetaPersonal() {
         return !carpetaPersonal.isEmpty();
+    }
+
+    public void editarContenido(String nuevoContenido) {
+        String texto = nuevoContenido == null ? "" : nuevoContenido.strip();
+        validarContenido(texto, tipo);
+        this.contenido = texto;
+    }
+
+    private Set<String> likesInternos() {
+        if (likes == null) {
+            likes = new LinkedHashSet<>();
+        }
+        return likes;
+    }
+
+    private List<Comentario> comentariosInternos() {
+        if (comentarios == null) {
+            comentarios = new ArrayList<>();
+        }
+        return comentarios;
+    }
+
+    public boolean alternarLike(String username) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Usuario inválido.");
+        }
+        if (likesInternos().contains(username)) {
+            likesInternos().remove(username);
+            return false;
+        }
+        likesInternos().add(username);
+        return true;
+    }
+
+    public boolean tieneLike(String username) {
+        return username != null && likesInternos().contains(username);
+    }
+
+    public int getCantidadLikes() {
+        return likesInternos().size();
+    }
+
+    public Set<String> getLikes() {
+        return new LinkedHashSet<>(likesInternos());
+    }
+
+    public Comentario agregarComentario(String autor, String texto) {
+        Comentario comentario = new Comentario(autor, texto);
+        comentariosInternos().add(comentario);
+        return comentario;
+    }
+
+    public Comentario agregarComentarioSticker(String autor, String rutaSticker) {
+        Comentario comentario = Comentario.crearSticker(autor, rutaSticker);
+        comentariosInternos().add(comentario);
+        return comentario;
+    }
+
+    public boolean eliminarComentario(String comentarioId, String actor) {
+        if (comentarioId == null || actor == null) {
+            return false;
+        }
+        return comentariosInternos().removeIf(comentario -> comentario.getId().equals(comentarioId) && comentario.getAutor().equals(actor));
+    }
+
+    public Publicacion copiaConComentarios(List<Comentario> comentariosVisibles) {
+        List<Comentario> visibles = comentariosVisibles == null ? new ArrayList<>() : new ArrayList<>(comentariosVisibles);
+        return new Publicacion(id, autor, fechaPublicacion, tipo, contenido, rutaAdjunto, carpetaPersonal, likesInternos(), visibles);
+    }
+
+    public List<Comentario> getComentarios() {
+        return new ArrayList<>(comentariosInternos());
+    }
+
+    public int getCantidadComentarios() {
+        return comentariosInternos().size();
     }
 
 

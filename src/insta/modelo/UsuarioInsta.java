@@ -21,6 +21,7 @@ public class UsuarioInsta implements Serializable {
 
     private boolean activa;
     private String rutaFotoPerfil;
+    private String biografia;
 
     public UsuarioInsta( String nombreCompleto,char genero,String username,String passwordHash,String passwordSalt,int edad,String rutaFotoPerfil ) {
         this.username = Objects.requireNonNull(
@@ -40,6 +41,7 @@ public class UsuarioInsta implements Serializable {
 
         this.fechaRegistro = LocalDateTime.now();
         this.activa = true;
+        this.biografia = "";
 
         setRutaFotoPerfil(rutaFotoPerfil);
     }
@@ -125,6 +127,18 @@ public class UsuarioInsta implements Serializable {
         this.rutaFotoPerfil = rutaFotoPerfil == null
                 ? ""
                 : rutaFotoPerfil;
+    }
+
+    public String getBiografia() {
+        return biografia == null ? "" : biografia;
+    }
+
+    public void setBiografia(String biografia) {
+        String texto = biografia == null ? "" : biografia.strip();
+        if (texto.codePointCount(0, texto.length()) > 160) {
+            throw new IllegalArgumentException("La biografía permite máximo 160 caracteres.");
+        }
+        this.biografia = texto;
     }
 
 

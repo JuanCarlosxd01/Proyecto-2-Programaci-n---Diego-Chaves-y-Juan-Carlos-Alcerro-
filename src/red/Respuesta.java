@@ -158,6 +158,7 @@ public class Respuesta implements Serializable {
         private final String username;
         private final String nombreCompleto;
         private final String rutaFotoPerfil;
+        private final String biografia;
 
         private final char genero;
         private final int edad;
@@ -181,6 +182,7 @@ public class Respuesta implements Serializable {
             genero = usuario.getGenero();
             edad = usuario.getEdad();
             rutaFotoPerfil = usuario.getRutaFotoPerfil();
+            biografia = usuario.getBiografia();
             activa = usuario.estaActiva();
             fechaRegistro = usuario.getFechaRegistro();
 
@@ -216,6 +218,10 @@ public class Respuesta implements Serializable {
 
         public String getRutaFotoPerfil() {
             return rutaFotoPerfil;
+        }
+
+        public String getBiografia() {
+            return biografia == null ? "" : biografia;
         }
 
         public int getFollowers() {

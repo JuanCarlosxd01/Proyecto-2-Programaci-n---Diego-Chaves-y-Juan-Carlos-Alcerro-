@@ -6,6 +6,13 @@ import java.awt.Color;
 public class TemaInsta {
 
     public static boolean oscuro;
+    public static boolean MODO_MOBILE;
+
+
+    public static final int MOVIL_ANCHO_IMAGEN = 360;
+    public static final int MOVIL_ALTO_CUADRADA = 360;
+    public static final int MOVIL_ALTO_VERTICAL = 450;
+    public static final int MOVIL_ALTO_HORIZONTAL = 189;
 
     public static Color FONDO;
     public static Color FONDO_SECUNDARIO;
@@ -19,7 +26,12 @@ public class TemaInsta {
     public static Color HOVER;
 
     static {
+        MODO_MOBILE = false;
         cambiarTema(false);
+    }
+
+    public static void cambiarModoMobile(boolean movil) {
+        MODO_MOBILE = movil;
     }
 
     public static void cambiarTema(boolean modoOscuro) {

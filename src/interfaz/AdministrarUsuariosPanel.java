@@ -5,6 +5,7 @@ import java.awt.*;
 import javax.swing.*;
 import sistema.GestorUsuarios;
 import sistema.Sesion;
+import modelo.UsuarioSistema;
 
 public class AdministrarUsuariosPanel extends JPanel {
 
@@ -98,7 +99,7 @@ public class AdministrarUsuariosPanel extends JPanel {
 
     private void crearUsuario() {
         if (!Sesion.esAdministrador()) {
-            JOptionPane.showMessageDialog(this, "Solo el administrador puede crear usuarios.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+            DialogosWindows.showMessageDialog(this, "Solo el administrador puede crear usuarios.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -107,27 +108,27 @@ public class AdministrarUsuariosPanel extends JPanel {
         String confirmarContrasena = new String(txtConfirmarContrasena.getPassword());
 
         if (username.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingrese un nombre de usuario.");
+            DialogosWindows.showMessageDialog(this, "Ingrese un nombre de usuario.");
             return;
         }
 
         if (contrasena.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingrese una contraseña.");
+            DialogosWindows.showMessageDialog(this, "Ingrese una contraseña.");
             return;
         }
 
         if (confirmarContrasena.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Confirme la contraseña.");
+            DialogosWindows.showMessageDialog(this, "Confirme la contraseña.");
             return;
         }
 
         if (!contrasena.equals(confirmarContrasena)) {
-            JOptionPane.showMessageDialog(this, "Las contraseñas no coinciden.", "Contraseña incorrecta", JOptionPane.ERROR_MESSAGE);
+            DialogosWindows.showMessageDialog(this, "Las contraseñas no coinciden.", "Contraseña incorrecta", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         if (!contrasenaValida(contrasena)) {
-            JOptionPane.showMessageDialog(
+            DialogosWindows.showMessageDialog(
                 this,
                 "La contraseña debe tener:\n\n"
                 + "- Mínimo 8 caracteres\n"
@@ -143,7 +144,7 @@ public class AdministrarUsuariosPanel extends JPanel {
         boolean creado = gestorUsuarios.crearUsuario(username, contrasena);
 
         if (creado) {
-            JOptionPane.showMessageDialog(this, "Usuario creado correctamente.");
+            DialogosWindows.showMessageDialog(this, "Usuario creado correctamente.");
 
             txtUsuario.setText("");
             txtContrasena.setText("");
@@ -151,35 +152,12 @@ public class AdministrarUsuariosPanel extends JPanel {
 
             actualizarLista();
         } else {
-            JOptionPane.showMessageDialog(this, "No se pudo crear el usuario. Puede que el nombre ya exista.");
+            DialogosWindows.showMessageDialog(this, "No se pudo crear el usuario. Puede que el nombre ya exista.");
         }
     }
 
     private boolean contrasenaValida(String contrasena) {
-        if (contrasena.length() < 8) {
-            return false;
-        }
-
-        boolean tieneMayuscula = false;
-        boolean tieneNumero = false;
-        boolean tieneSimbolo = false;
-
-        for (char caracter : contrasena.toCharArray()) {
-
-            if (Character.isUpperCase(caracter)) {
-                tieneMayuscula = true;
-            }
-
-            if (Character.isDigit(caracter)) {
-                tieneNumero = true;
-            }
-
-            if (!Character.isLetterOrDigit(caracter)) {
-                tieneSimbolo = true;
-            }
-        }
-
-        return tieneMayuscula && tieneNumero && tieneSimbolo;
+        return UsuarioSistema.contrasenaValida(contrasena);
     }
 
     private void mostrarOcultarContrasena() {

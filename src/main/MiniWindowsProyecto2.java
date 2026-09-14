@@ -2,55 +2,55 @@
 package main;
 
 import interfaz.VentanaPrincipal;
-import java.net.BindException;
-import java.util.Arrays;
-import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
 import red.Servidor;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 public class MiniWindowsProyecto2 {
 
+    private static Servidor servidor;
+
     public static void main(String[] args) {
-        boolean soloServidor = Arrays.asList(args).contains("--servidor");
-        boolean soloCliente = Arrays.asList(args).contains("--cliente");
 
-        if (!soloCliente) {
+        iniciarServidor();
+
+        SwingUtilities.invokeLater(() -> {
             try {
-                Servidor servidor = new Servidor(
-                        Integer.getInteger("insta.puerto", 5050),
-                        System.getProperty("insta.raiz", "INSTA_RAIZ")
-                );
-
-                Runtime.getRuntime().addShutdownHook(
-                        new Thread(servidor::close)
-                );
-
-                Thread hilo = new Thread(() -> {
-                    try {
-                        servidor.iniciar();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }, "servidor-insta");
-
-                hilo.setDaemon(!soloServidor);
-                hilo.start();
-            } catch (BindException e) {
-                if (soloServidor) {
-                    System.err.println("El puerto ya está ocupado.");
-                    return;
-                }
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(
-                        null,
-                        "No se pudo iniciar el servidor: " + e.getMessage()
-                );
-                return;
+                System.err.println("No se pudo aplicar el estilo de Windows: " + e.getMessage());
             }
-        }
 
-        if (!soloServidor) {
-            SwingUtilities.invokeLater(() -> new VentanaPrincipal());
+            new VentanaPrincipal();
+        });
+    }
+
+    private static void iniciarServidor() {
+        try {
+            servidor = new Servidor();
+
+            Thread hiloServidor = new Thread(() -> {
+                try {
+                    servidor.iniciar();
+                } catch (Exception e) {
+                    System.err.println("Error en servidor INSTA+: " + e.getMessage());
+                }
+            });
+
+            hiloServidor.setName("Servidor-INSTA");
+            hiloServidor.setDaemon(true);
+            hiloServidor.start();
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if(servidor != null) {
+                    servidor.close();
+                }
+            }));
+
+            System.out.println("Servidor INSTA+ iniciado en puerto " + servidor.getPuerto());
+
+        } catch (Exception e) {
+            System.err.println("No se pudo iniciar el servidor INSTA+: " + e.getMessage());
         }
     }
 }

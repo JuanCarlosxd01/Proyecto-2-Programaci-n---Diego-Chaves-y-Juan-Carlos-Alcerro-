@@ -1,40 +1,39 @@
-
-
 package EditorTexto;
 
-import excepciones.ArchivoedtException;
+import excepciones.ArchivoTxtException;
+import interfaz.DialogosWindows;
 import interfaz.EditorTextoPanel;
 import java.awt.Color;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
-import javax.swing.JTextPane;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
-import sistema.RutasSistema;
-import sistema.SeguridadArchivos;
 
 public class ControladorEditor {
 
-    private EditorTextoPanel vista;
+    private final EditorTextoPanel vista;
     private Color colorActual;
-    private EdtReader lector;
-    private EdtWriter escritor;
+    private final TxtReader lector;
+    private final TxtWriter escritor;
     private String rutaActual;
 
     public ControladorEditor(EditorTextoPanel vista) {
         this.vista = vista;
         colorActual = Color.BLACK;
-        lector = new EdtReader();
-        escritor = new EdtWriter();
-        rutaActual = null;
+        lector = new TxtReader();
+        escritor = new TxtWriter();
         configurarEventos();
     }
 
@@ -55,24 +54,13 @@ public class ControladorEditor {
     private void aplicarFormato() {
         String fuente = (String) vista.getCmbFuente().getSelectedItem();
         int tamano = (Integer) vista.getCmbTamano().getSelectedItem();
+        Formato formato = Formato.desde(fuente, tamano, vista.getBtnNegrita().isSelected(), vista.getBtnCursiva().isSelected(), vista.getBtnSubrayado().isSelected(), vista.getBtnTachado().isSelected(), colorActual);
+        SimpleAttributeSet atributos = atributos(formato);
+        vista.getAreaTexto().setCharacterAttributes(atributos, false);
+    }
 
-        boolean negrita = vista.getBtnNegrita().isSelected();
-        boolean cursiva = vista.getBtnCursiva().isSelected();
-        boolean subrayado = vista.getBtnSubrayado().isSelected();
-        boolean tachado = vista.getBtnTachado().isSelected();
-
-        Formato formato = Formato.desde(
-                fuente,
-                tamano,
-                negrita,
-                cursiva,
-                subrayado,
-                tachado,
-                colorActual
-        );
-
+    private SimpleAttributeSet atributos(Formato formato) {
         SimpleAttributeSet atributos = new SimpleAttributeSet();
-
         StyleConstants.setFontFamily(atributos, formato.getFuente());
         StyleConstants.setFontSize(atributos, formato.getTamano());
         StyleConstants.setForeground(atributos, formato.getColor());
@@ -80,218 +68,114 @@ public class ControladorEditor {
         StyleConstants.setItalic(atributos, formato.esCursiva());
         StyleConstants.setUnderline(atributos, formato.esSubrayado());
         StyleConstants.setStrikeThrough(atributos, formato.esTachado());
-
-        vista.getAreaTexto().setCharacterAttributes(atributos, false);
+        return atributos;
     }
 
     private void cambiarColor() {
-        Color nuevoColor = JColorChooser.showDialog(
-                vista,
-                "Seleccionar color",
-                colorActual
-        );
-
-        if (nuevoColor != null) {
-            colorActual = nuevoColor;
+        Color nuevo = JColorChooser.showDialog(vista, "Seleccionar color", colorActual);
+        if (nuevo != null) {
+            colorActual = nuevo;
             aplicarFormato();
         }
     }
 
     private void abrirArchivo() {
-        JFileChooser chooser = new JFileChooser(
-                RutasSistema.getDocumentosUsuarioActual()
-        );
-
-        int resultado = chooser.showOpenDialog(vista);
-
-        if (resultado != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
+        JFileChooser chooser = crearSelector();
+        if (chooser.showOpenDialog(vista) != JFileChooser.APPROVE_OPTION) return;
 
         File archivo = chooser.getSelectedFile();
-
-        if (!SeguridadArchivos.esPermitido(archivo)) {
-            JOptionPane.showMessageDialog(
-                    vista,
-                    "Selecciona un archivo dentro de tu cuenta."
-            );
-            return;
-        }
+        String ruta = archivo.getAbsolutePath();
 
         try {
-            List<TextChunk> fragmentos = lector.abrir(
-                    archivo.getAbsolutePath()
-            );
+            if (lector.tieneFormatoMiniWindows(archivo)) {
+                cargarDocumento(lector.abrir(ruta));
+            } else {
+                cargarTextoPlano(Files.readString(archivo.toPath(), StandardCharsets.UTF_8));
+            }
+            rutaActual = ruta;
+        } catch (ArchivoTxtException | IOException e) {
+            DialogosWindows.showMessageDialog(vista, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
-            cargarDocumento(fragmentos);
-            rutaActual = archivo.getAbsolutePath();
-        } catch (ArchivoedtException e) {
-            JOptionPane.showMessageDialog(
-                    vista,
-                    e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+    private JFileChooser crearSelector() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter("Documentos de texto (*.txt)", "txt"));
+        return chooser;
+    }
+
+    private void cargarTextoPlano(String texto) {
+        vista.getAreaTexto().setText("");
+        Formato formato = Formato.desde("Segoe UI", 12, false, false, false, false, Color.BLACK);
+        try {
+            vista.getAreaTexto().getStyledDocument().insertString(0, texto, atributos(formato));
+        } catch (BadLocationException e) {
+            DialogosWindows.showMessageDialog(vista, "No se pudo cargar el texto.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void cargarDocumento(List<TextChunk> fragmentos) {
-        JTextPane area = vista.getAreaTexto();
-        area.setText("");
-
-        StyledDocument documento = area.getStyledDocument();
-
+        vista.getAreaTexto().setText("");
+        StyledDocument documento = vista.getAreaTexto().getStyledDocument();
         for (TextChunk chunk : fragmentos) {
-            Formato formato = chunk.getFormato();
-            SimpleAttributeSet atributos = new SimpleAttributeSet();
-
-            StyleConstants.setFontFamily(atributos, formato.getFuente());
-            StyleConstants.setFontSize(atributos, formato.getTamano());
-            StyleConstants.setForeground(atributos, formato.getColor());
-            StyleConstants.setBold(atributos, formato.esNegrita());
-            StyleConstants.setItalic(atributos, formato.esCursiva());
-            StyleConstants.setUnderline(atributos, formato.esSubrayado());
-            StyleConstants.setStrikeThrough(atributos, formato.esTachado());
-
             try {
-                documento.insertString(
-                        documento.getLength(),
-                        chunk.getTexto(),
-                        atributos
-                );
+                documento.insertString(documento.getLength(), chunk.getTexto(), atributos(chunk.getFormato()));
             } catch (BadLocationException e) {
-                JOptionPane.showMessageDialog(
-                        vista,
-                        "Error cargando el texto"
-                );
+                DialogosWindows.showMessageDialog(vista, "Error cargando el texto.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
             }
         }
     }
 
     private List<TextChunk> obtenerFragmentos() {
         List<TextChunk> fragmentos = new ArrayList<>();
-
-        StyledDocument documento = vista.getAreaTexto()
-                .getStyledDocument();
-
+        StyledDocument documento = vista.getAreaTexto().getStyledDocument();
         int posicion = 0;
-
         while (posicion < documento.getLength()) {
             Element elemento = documento.getCharacterElement(posicion);
-            AttributeSet atributos = elemento.getAttributes();
-
+            AttributeSet a = elemento.getAttributes();
             int inicio = elemento.getStartOffset();
-            int fin = Math.min(
-                    elemento.getEndOffset(),
-                    documento.getLength()
-            );
-
+            int fin = Math.min(elemento.getEndOffset(), documento.getLength());
             try {
                 String texto = documento.getText(inicio, fin - inicio);
-                String fuente = StyleConstants.getFontFamily(atributos);
-                int tamano = StyleConstants.getFontSize(atributos);
-
-                boolean negrita = StyleConstants.isBold(atributos);
-                boolean cursiva = StyleConstants.isItalic(atributos);
-                boolean subrayado = StyleConstants.isUnderline(atributos);
-                boolean tachado = StyleConstants.isStrikeThrough(atributos);
-
-                Color color = StyleConstants.getForeground(atributos);
-
-                Formato formato = Formato.desde(
-                        fuente,
-                        tamano,
-                        negrita,
-                        cursiva,
-                        subrayado,
-                        tachado,
-                        color
-                );
-
+                Formato formato = Formato.desde(StyleConstants.getFontFamily(a), StyleConstants.getFontSize(a), StyleConstants.isBold(a), StyleConstants.isItalic(a), StyleConstants.isUnderline(a), StyleConstants.isStrikeThrough(a), StyleConstants.getForeground(a));
                 fragmentos.add(new TextChunk(texto, formato));
             } catch (BadLocationException e) {
-                System.out.println("Error leyendo el documento");
+                throw new IllegalStateException("No se pudo leer el documento.", e);
             }
-
             posicion = fin;
         }
-
         return fragmentos;
     }
 
     private void guardarComo() {
-        JFileChooser chooser = new JFileChooser(
-                RutasSistema.getDocumentosUsuarioActual()
-        );
-
-        int resultado = chooser.showSaveDialog(vista);
-
-        if (resultado != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File archivo = chooser.getSelectedFile();
-
-        if (!SeguridadArchivos.esPermitido(archivo)) {
-            JOptionPane.showMessageDialog(
-                    vista,
-                    "Selecciona un archivo dentro de tu cuenta."
-            );
-            return;
-        }
-
-        String ruta = archivo.getAbsolutePath();
-
-        if (!ruta.toLowerCase().endsWith(".edt")
-                && !ruta.toLowerCase().endsWith(".txt")) {
-            ruta += ".txt";
-        }
-
-        try {
-            List<TextChunk> fragmentos = obtenerFragmentos();
-            escritor.guardar(ruta, fragmentos);
-            rutaActual = ruta;
-
-            JOptionPane.showMessageDialog(
-                    vista,
-                    "Archivo guardado correctamente"
-            );
-        } catch (ArchivoedtException e) {
-            JOptionPane.showMessageDialog(
-                    vista,
-                    e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
-        }
+        JFileChooser chooser = crearSelector();
+        if (chooser.showSaveDialog(vista) != JFileChooser.APPROVE_OPTION) return;
+        String ruta = chooser.getSelectedFile().getAbsolutePath();
+        if (!ruta.toLowerCase().endsWith(".txt")) ruta += ".txt";
+        if (guardarEn(ruta)) rutaActual = ruta;
     }
 
     private void guardar() {
-        if (rutaActual != null
-                && !SeguridadArchivos.esPermitido(new File(rutaActual))) {
-            return;
-        }
-
         if (rutaActual == null) {
             guardarComo();
             return;
         }
+        guardarEn(rutaActual);
+    }
 
+    private boolean guardarEn(String ruta) {
         try {
             List<TextChunk> fragmentos = obtenerFragmentos();
-            escritor.guardar(rutaActual, fragmentos);
-
-            JOptionPane.showMessageDialog(
-                    vista,
-                    "Archivo guardado correctamente"
-            );
-        } catch (ArchivoedtException e) {
-            JOptionPane.showMessageDialog(
-                    vista,
-                    e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            if (!ruta.toLowerCase().endsWith(".txt")) {
+                ruta += ".txt";
+            }
+            escritor.guardar(ruta, fragmentos);
+            DialogosWindows.showMessageDialog(vista, "Archivo .txt guardado correctamente con su formato.");
+            return true;
+        } catch (ArchivoTxtException e) {
+            DialogosWindows.showMessageDialog(vista, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
     }
 
