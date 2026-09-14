@@ -1,16 +1,32 @@
+
+
 package interfaz;
 
-import java.awt.*;
-import java.awt.event.*;
+import insta.interfaz.ImagenTemporal;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Image;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
-import javax.imageio.ImageIO;
-import javax.swing.*;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import sistema.SeguridadArchivos;
 
 public class VisorImagenPanel extends JPanel {
 
@@ -47,10 +63,15 @@ public class VisorImagenPanel extends JPanel {
     }
 
     private void crearInterfaz() {
-        lblNombre = new JLabel("Visor de imágenes", SwingConstants.CENTER);
+        lblNombre = new JLabel(
+                "Visor de imágenes",
+                SwingConstants.CENTER
+        );
+
         lblNombre.setForeground(Color.WHITE);
         lblNombre.setFont(new Font("Segoe UI", Font.PLAIN, 18));
         lblNombre.setBorder(new EmptyBorder(10, 10, 10, 10));
+
         add(lblNombre, BorderLayout.NORTH);
 
         panelVisor = new JPanel(new BorderLayout());
@@ -65,7 +86,10 @@ public class VisorImagenPanel extends JPanel {
         JPanel panelInferior = new JPanel(new BorderLayout());
         panelInferior.setBackground(new Color(35, 35, 35));
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 8));
+        JPanel panelBotones = new JPanel(
+                new FlowLayout(FlowLayout.CENTER, 20, 8)
+        );
+
         panelBotones.setOpaque(false);
 
         btnAnterior = new JButton("◀ Anterior");
@@ -80,14 +104,24 @@ public class VisorImagenPanel extends JPanel {
         panelInferior.add(panelBotones, BorderLayout.NORTH);
 
         panelMiniaturas = new JPanel();
-        panelMiniaturas.setLayout(new BoxLayout(panelMiniaturas, BoxLayout.X_AXIS));
+        panelMiniaturas.setLayout(
+                new BoxLayout(panelMiniaturas, BoxLayout.X_AXIS)
+        );
+
         panelMiniaturas.setBackground(new Color(25, 25, 25));
         panelMiniaturas.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         scrollMiniaturas = new JScrollPane(panelMiniaturas);
         scrollMiniaturas.setPreferredSize(new Dimension(0, 125));
-        scrollMiniaturas.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        scrollMiniaturas.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+
+        scrollMiniaturas.setHorizontalScrollBarPolicy(
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        );
+
+        scrollMiniaturas.setVerticalScrollBarPolicy(
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER
+        );
+
         scrollMiniaturas.getHorizontalScrollBar().setUnitIncrement(15);
         scrollMiniaturas.setBorder(null);
 
@@ -128,7 +162,10 @@ public class VisorImagenPanel extends JPanel {
             return;
         }
 
-        Arrays.sort(archivos, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        Arrays.sort(
+                archivos,
+                (a, b) -> a.getName().compareToIgnoreCase(b.getName())
+        );
 
         for (File archivo : archivos) {
             if (archivo.isFile() && esImagen(archivo)) {
@@ -140,7 +177,11 @@ public class VisorImagenPanel extends JPanel {
     private boolean esImagen(File archivo) {
         String nombre = archivo.getName().toLowerCase();
 
-        return nombre.endsWith(".png") || nombre.endsWith(".jpg") || nombre.endsWith(".jpeg") || nombre.endsWith(".gif") || nombre.endsWith(".bmp");
+        return nombre.endsWith(".png")
+                || nombre.endsWith(".jpg")
+                || nombre.endsWith(".jpeg")
+                || nombre.endsWith(".gif")
+                || nombre.endsWith(".bmp");
     }
 
     private void crearMiniaturas() {
@@ -177,15 +218,18 @@ public class VisorImagenPanel extends JPanel {
         boton.setBackground(new Color(45, 45, 45));
         boton.setToolTipText(archivo.getName());
 
-        try {
-            BufferedImage original = ImageIO.read(archivo);
+        JLabel miniatura = new JLabel("...", SwingConstants.CENTER);
 
-            if (original != null) {
-                Image imagenMiniatura = escalarImagen(original, 85, 75);
-                boton.setIcon(new ImageIcon(imagenMiniatura));
-            }
-        } catch (IOException e) {
-            boton.setText("?");
+        boton.setLayout(new BorderLayout());
+        boton.add(miniatura, BorderLayout.CENTER);
+
+        if (SeguridadArchivos.esPermitido(archivo)) {
+            ImagenTemporal.cargar(
+                    miniatura,
+                    () -> Files.readAllBytes(archivo.toPath()),
+                    85,
+                    75
+            );
         }
 
         boton.addActionListener(e -> {
@@ -197,51 +241,41 @@ public class VisorImagenPanel extends JPanel {
     }
 
     private void mostrarImagen() {
-        if (imagenes.isEmpty()) {
-            return;
-        }
-
-        if (indiceActual < 0 || indiceActual >= imagenes.size()) {
+        if (imagenes.isEmpty()
+                || indiceActual < 0
+                || indiceActual >= imagenes.size()) {
             return;
         }
 
         File archivo = imagenes.get(indiceActual);
 
-        try {
-            BufferedImage original = ImageIO.read(archivo);
-
-            if (original == null) {
-                lblImagen.setIcon(null);
-                lblImagen.setText("No se pudo cargar la imagen.");
-                return;
-            }
-
-            int ancho = panelVisor.getWidth() - 40;
-            int alto = panelVisor.getHeight() - 40;
-
-            if (ancho <= 100) {
-                ancho = 700;
-            }
-
-            if (alto <= 100) {
-                alto = 450;
-            }
-
-            Image imagenEscalada = escalarImagen(original, ancho, alto);
-
-            lblImagen.setText("");
-            lblImagen.setIcon(new ImageIcon(imagenEscalada));
-            lblNombre.setText(archivo.getName() + "     " + (indiceActual + 1) + " de " + imagenes.size());
-
-            actualizarSeleccionMiniaturas();
-
-        } catch (IOException e) {
-            lblImagen.setIcon(null);
-            lblImagen.setText("Error al abrir " + archivo.getName());
+        if (!SeguridadArchivos.esPermitido(archivo)) {
+            return;
         }
+
+        int ancho = Math.max(100, panelVisor.getWidth() - 40);
+        int alto = Math.max(100, panelVisor.getHeight() - 40);
+
+        ImagenTemporal.cargar(
+                lblImagen,
+                () -> Files.readAllBytes(archivo.toPath()),
+                ancho,
+                alto
+        );
+
+        lblNombre.setText(
+                archivo.getName() + "   "
+                + (indiceActual + 1) + " de " + imagenes.size()
+        );
+
+        actualizarSeleccionMiniaturas();
     }
 
-    private Image escalarImagen(BufferedImage original, int anchoMaximo, int altoMaximo) {
+    private Image escalarImagen(
+            BufferedImage original,
+            int anchoMaximo,
+            int altoMaximo
+    ) {
         int anchoOriginal = original.getWidth();
         int altoOriginal = original.getHeight();
 
@@ -256,7 +290,11 @@ public class VisorImagenPanel extends JPanel {
         int nuevoAncho = (int) (anchoOriginal * escala);
         int nuevoAlto = (int) (altoOriginal * escala);
 
-        return original.getScaledInstance(nuevoAncho, nuevoAlto, Image.SCALE_SMOOTH);
+        return original.getScaledInstance(
+                nuevoAncho,
+                nuevoAlto,
+                Image.SCALE_SMOOTH
+        );
     }
 
     private void siguiente() {
@@ -295,7 +333,9 @@ public class VisorImagenPanel extends JPanel {
                 JButton boton = (JButton) componente;
 
                 if (numeroBoton == indiceActual) {
-                    boton.setBorder(new LineBorder(new Color(0, 120, 215), 3));
+                    boton.setBorder(
+                            new LineBorder(new Color(0, 120, 215), 3)
+                    );
                 } else {
                     boton.setBorder(new LineBorder(Color.GRAY, 1));
                 }

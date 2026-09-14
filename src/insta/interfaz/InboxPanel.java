@@ -172,4 +172,6 @@ public class InboxPanel extends JPanel implements Tematizable {
     public JPanel getPanelMensajes() {
         return panelMensajes;
     }
+    
+    
 }

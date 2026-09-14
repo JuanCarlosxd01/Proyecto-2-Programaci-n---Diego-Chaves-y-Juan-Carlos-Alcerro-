@@ -1,28 +1,30 @@
 
 package sistema;
 
-import modelo.*;
+import modelo.UsuarioSistema;
 
 public class Sesion {
-    private static UsuarioSistema usuarioActual;
-    
-    public static void iniciarSesion(UsuarioSistema usuario){
+
+    private static volatile UsuarioSistema usuarioActual;
+
+    public static void iniciarSesion(UsuarioSistema usuario) {
         usuarioActual = usuario;
     }
-    
+
     public static void cerrarSesion() {
         usuarioActual = null;
     }
-    
-    public static UsuarioSistema getUsuarioActual(){
+
+    public static UsuarioSistema getUsuarioActual() {
         return usuarioActual;
     }
-    
-    public boolean haySesion(){
+
+    public static boolean haySesion() {
         return usuarioActual != null;
     }
-    
-    public static boolean esAdministrador(){
-        return usuarioActual != null && usuarioActual.esAdministrador();
+
+    public static boolean esAdministrador() {
+        return usuarioActual != null
+                && usuarioActual.esAdministrador();
     }
 }

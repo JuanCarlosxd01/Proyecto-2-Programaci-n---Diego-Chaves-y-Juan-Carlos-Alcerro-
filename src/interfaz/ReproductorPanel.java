@@ -1,384 +1,332 @@
+
+
 package interfaz;
 
-import java.awt.*;
-import javax.swing.*;
-import hilos.*;
-import java.awt.event.*;
-import java.io.*;
+import insta.interfaz.ImagenTemporal;
+import insta.servicio.ImagenesInsta;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
 import java.util.Arrays;
-import multimedia.*;
-import sistema.*;
+import java.util.Comparator;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import multimedia.LectorMetadataMP3;
+import multimedia.MetadataCancion;
+import multimedia.ReproductorMusica;
+import sistema.RutasSistema;
+import sistema.SeguridadArchivos;
 
 public class ReproductorPanel extends JPanel {
 
-    private JLabel lblCaratula;
-    private JLabel lblCancion;
-    private JLabel lblDescripcion;
+    private final ReproductorMusica reproductor = new ReproductorMusica();
 
-    private JButton btnPlay;
-    private JButton btnPause;
-    private JButton btnStop;
-    private JButton btnActualizar;
+    private final ScheduledExecutorService hilo =
+            Executors.newSingleThreadScheduledExecutor(tarea -> {
+                Thread nuevoHilo = new Thread(tarea, "musica");
+                nuevoHilo.setDaemon(true);
+                return nuevoHilo;
+            });
 
-    private JSlider progreso;
+    private final DefaultListModel<File> modelo = new DefaultListModel<>();
+    private final JList<File> canciones = new JList<>(modelo);
+
+    private final JLabel titulo = new JLabel(
+            "Tu música",
+            SwingConstants.CENTER
+    );
+
+    private final JLabel descripcion = new JLabel(
+            "Selecciona una canción",
+            SwingConstants.CENTER
+    );
+
+    private final JLabel caratula = new JLabel(
+            "♫",
+            SwingConstants.CENTER
+    );
+
+    private final JSlider progreso = new JSlider(0, 1000);
+
+    private File cargada;
+    private volatile boolean cerrado;
+    private volatile long duracion;
     private Runnable accionCerrar;
 
-    private JList<String> listaCanciones;
-    private DefaultListModel<String> modeloCanciones;
-
-    private ReproductorMusica reproductor;
-    private HiloReproductor hiloReproductor;
-    private File carpetaMusica;
-    private File[] canciones;
-    private int indiceActual;
-    private boolean moviendoSlider;
-
     public ReproductorPanel() {
-        setLayout(new BorderLayout(20, 20));
-        setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
+        setLayout(new BorderLayout(10, 10));
+        setBackground(new Color(25, 25, 30));
 
-        reproductor = new ReproductorMusica();
-        indiceActual = -1;
-        moviendoSlider = false;
+        titulo.setForeground(Color.WHITE);
+        titulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
 
-        crearInformacionCancion();
-        crearControles();
-        crearListaCanciones();
-        cargarCarpetaMusica();
-        configurarEventos();
-        iniciarHilo();
-    }
+        descripcion.setForeground(Color.WHITE);
+        caratula.setForeground(Color.WHITE);
+        caratula.setPreferredSize(new Dimension(250, 250));
 
-    private void crearInformacionCancion() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JPanel centro = new JPanel(new BorderLayout());
+        centro.setOpaque(false);
+        centro.add(caratula, BorderLayout.CENTER);
+        centro.add(descripcion, BorderLayout.SOUTH);
 
-        lblCaratula = new JLabel("♫");
-        lblCaratula.setHorizontalAlignment(SwingConstants.CENTER);
-        lblCaratula.setFont(new Font("Arial", Font.PLAIN, 100));
-        lblCaratula.setPreferredSize(new Dimension(250, 250));
-        lblCaratula.setMaximumSize(new Dimension(250, 250));
-        lblCaratula.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        lblCaratula.setAlignmentX(Component.CENTER_ALIGNMENT);
+        add(titulo, BorderLayout.NORTH);
+        add(new JScrollPane(canciones), BorderLayout.WEST);
+        add(centro, BorderLayout.CENTER);
 
-        lblCancion = new JLabel("Ninguna canción seleccionada");
-        lblCancion.setFont(new Font("Arial", Font.BOLD, 22));
-        lblCancion.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JPanel controles = new JPanel(new BorderLayout());
+        JPanel botones = new JPanel();
 
-        lblDescripcion = new JLabel("Seleccione una canción");
-        lblDescripcion.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JButton play = new JButton("Play");
+        JButton pause = new JButton("Pause");
+        JButton stop = new JButton("Stop");
+        JButton actualizar = new JButton("Actualizar");
 
-        panel.add(lblCaratula);
-        panel.add(Box.createVerticalStrut(20));
-        panel.add(lblCancion);
-        panel.add(Box.createVerticalStrut(5));
-        panel.add(lblDescripcion);
+        botones.add(play);
+        botones.add(pause);
+        botones.add(stop);
+        botones.add(actualizar);
 
-        add(panel, BorderLayout.CENTER);
-    }
+        controles.add(botones, BorderLayout.NORTH);
+        controles.add(progreso, BorderLayout.SOUTH);
 
-    private void crearControles() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        add(controles, BorderLayout.SOUTH);
 
-        progreso = new JSlider();
-        progreso.setMinimum(0);
-        progreso.setMaximum(100);
-        progreso.setValue(0);
+        canciones.setCellRenderer(
+                (lista, archivo, indice, seleccionado, enfoque) -> {
+                    JLabel etiqueta = new JLabel(archivo.getName());
+                    etiqueta.setOpaque(true);
 
-        JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+                    etiqueta.setBackground(
+                            seleccionado
+                                    ? lista.getSelectionBackground()
+                                    : lista.getBackground()
+                    );
 
-        btnPlay = new JButton("▶ Play");
-        btnPause = new JButton("⏸ Pause");
-        btnStop = new JButton("■ Stop");
-        btnActualizar = new JButton("↻ Actualizar");
+                    etiqueta.setForeground(
+                            seleccionado
+                                    ? lista.getSelectionForeground()
+                                    : lista.getForeground()
+                    );
 
-        botones.add(btnPlay);
-        botones.add(btnPause);
-        botones.add(btnStop);
-        botones.add(btnActualizar);
+                    return etiqueta;
+                }
+        );
 
-        panel.add(progreso);
-        panel.add(botones);
+        play.addActionListener(e -> {
+            File archivo = canciones.getSelectedValue();
 
-        add(panel, BorderLayout.SOUTH);
-    }
-
-    private void crearListaCanciones() {
-        JPanel panel = new JPanel(new BorderLayout());
-
-        JLabel titulo = new JLabel("Lista de canciones");
-        titulo.setFont(new Font("Arial", Font.BOLD, 18));
-
-        modeloCanciones = new DefaultListModel<>();
-        listaCanciones = new JList<>(modeloCanciones);
-        listaCanciones.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        JScrollPane scroll = new JScrollPane(listaCanciones);
-
-        panel.add(titulo, BorderLayout.NORTH);
-        panel.add(scroll, BorderLayout.CENTER);
-
-        panel.setPreferredSize(new Dimension(300, 0));
-
-        add(panel, BorderLayout.EAST);
-    }
-
-    private void cargarCarpetaMusica() {
-        modeloCanciones.clear();
-        indiceActual = -1;
-        progreso.setValue(0);
-
-        if (Sesion.getUsuarioActual() == null) {
-            canciones = new File[0];
-            lblDescripcion.setText("No hay una sesión iniciada");
-            return;
-        }
-
-        String usuario = Sesion.getUsuarioActual().getUsername();
-        carpetaMusica = new File("Z" + File.separator + usuario + File.separator + "Música");
-
-        System.out.println("Usuario actual: " + usuario);
-        System.out.println("Buscando música en: " + carpetaMusica.getAbsolutePath());
-        System.out.println("Existe carpeta: " + carpetaMusica.exists());
-
-        if (!carpetaMusica.exists()) {
-            carpetaMusica.mkdirs();
-        }
-
-        canciones = carpetaMusica.listFiles(archivo -> {
-            if (!archivo.isFile()) {
-                return false;
+            if (archivo != null) {
+                reproducir(archivo);
             }
-
-            String nombre = archivo.getName().toLowerCase();
-            return nombre.endsWith(".wav") || nombre.endsWith(".au") || nombre.endsWith(".aiff") || nombre.endsWith(".aif") || nombre.endsWith(".mp3");
         });
 
-        if (canciones == null) {
-            canciones = new File[0];
-        }
+        pause.addActionListener(e -> tarea(reproductor::pausar));
+        stop.addActionListener(e -> tarea(reproductor::detener));
+        actualizar.addActionListener(e -> actualizar());
 
-        System.out.println("Canciones encontradas: " + canciones.length);
-
-        for (File archivo : canciones) {
-            System.out.println("Canción: " + archivo.getAbsolutePath());
-        }
-
-        Arrays.sort(canciones, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
-
-        for (File cancion : canciones) {
-            modeloCanciones.addElement(cancion.getName());
-        }
-
-        if (canciones.length == 0) {
-            lblCancion.setText("Ninguna canción seleccionada");
-            lblDescripcion.setText("No hay canciones en la carpeta Música");
-        } else {
-            lblDescripcion.setText(canciones.length + " canciones encontradas");
-        }
-    }
-
-    private void configurarEventos() {
-        btnPlay.addActionListener(e -> reproducirSeleccionada());
-
-        btnPause.addActionListener(e -> {
-            if (!reproductor.estaCargada()) {
-                JOptionPane.showMessageDialog(this, "Seleccione una canción primero.");
-                return;
-            }
-
-            reproductor.pausar();
-            lblDescripcion.setText("Canción pausada");
-        });
-
-        btnStop.addActionListener(e -> {
-            if (!reproductor.estaCargada()) {
-                return;
-            }
-
-            reproductor.detener();
-            progreso.setValue(0);
-            lblDescripcion.setText("Reproducción detenida");
-        });
-
-        btnActualizar.addActionListener(e -> {
-            reproductor.cerrar();
-            progreso.setValue(0);
-            lblCancion.setText("Ninguna canción seleccionada");
-            cargarCarpetaMusica();
-        });
-
-        listaCanciones.addMouseListener(new MouseAdapter() {
+        canciones.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    reproducirSeleccionada();
+                if (e.getClickCount() == 2
+                        && canciones.getSelectedValue() != null) {
+                    reproducir(canciones.getSelectedValue());
                 }
             }
         });
 
-        progreso.addChangeListener(e -> {
-            if (progreso.getValueIsAdjusting()) {
-                moviendoSlider = true;
-                return;
+        progreso.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                long posicion = duracion * progreso.getValue() / 1000;
+                tarea(() -> reproductor.cambiarPosicion(posicion));
+            }
+        });
+
+        hilo.scheduleWithFixedDelay(() -> {
+            duracion = reproductor.getDuracion();
+            long posicion = reproductor.getPosicionActual();
+
+            int valor = duracion == 0
+                    ? 0
+                    : (int) (posicion * 1000 / duracion);
+
+            SwingUtilities.invokeLater(() -> {
+                if (!cerrado && !progreso.getValueIsAdjusting()) {
+                    progreso.setValue(valor);
+                }
+            });
+        }, 0, 300, TimeUnit.MILLISECONDS);
+
+        actualizar();
+    }
+
+    private void actualizar() {
+        File carpeta = RutasSistema.getMusicaUsuarioActual();
+
+        if (carpeta == null) {
+            return;
+        }
+
+        tarea(() -> {
+            File[] archivos = carpeta.listFiles(archivo ->
+                    archivo.isFile()
+                    && archivo.getName().toLowerCase()
+                            .matches(".*\\.(mp3|wav|au|aiff|aif)$")
+            );
+
+            if (archivos == null) {
+                archivos = new File[0];
             }
 
-            if (moviendoSlider && reproductor.estaCargada()) {
-                long duracion = reproductor.getDuracion();
-                long nuevaPosicion = (duracion * progreso.getValue()) / 100;
+            Arrays.sort(
+                    archivos,
+                    Comparator.comparing(
+                            File::getName,
+                            String.CASE_INSENSITIVE_ORDER
+                    )
+            );
 
-                reproductor.cambiarPosicion(nuevaPosicion);
+            File[] lista = archivos;
 
-                moviendoSlider = false;
-            }
+            SwingUtilities.invokeLater(() -> {
+                if (cerrado) {
+                    return;
+                }
+
+                modelo.clear();
+
+                for (File archivo : lista) {
+                    modelo.addElement(archivo);
+                }
+            });
         });
     }
 
-    private void reproducirSeleccionada() {
-        if (canciones == null || canciones.length == 0) {
-            JOptionPane.showMessageDialog(this, "No hay canciones compatibles en la carpeta Música.");
+    public void abrirArchivo(File archivo) {
+        if (!SeguridadArchivos.esPermitido(archivo)) {
             return;
         }
 
-        int seleccion = listaCanciones.getSelectedIndex();
+        if (!modelo.contains(archivo)) {
+            modelo.addElement(archivo);
+        }
 
-        if (seleccion == -1) {
-            if (indiceActual >= 0 && reproductor.estaCargada()) {
-                reproductor.reproducir();
-                lblDescripcion.setText("Reproduciendo");
+        canciones.setSelectedValue(archivo, true);
+        reproducir(archivo);
+    }
+
+    private void reproducir(File archivo) {
+        if (!SeguridadArchivos.esPermitido(archivo)) {
+            return;
+        }
+
+        titulo.setText("Cargando...");
+
+        tarea(() -> {
+            if (!archivo.equals(cargada)) {
+                cargada = null;
+                reproductor.cargarCancion(archivo);
+                cargada = archivo;
+            }
+
+            MetadataCancion metadata = LectorMetadataMP3.leer(archivo);
+
+            if (cerrado) {
+                reproductor.cerrar();
                 return;
             }
 
-            seleccion = 0;
-            listaCanciones.setSelectedIndex(0);
-        }
-
-        if (seleccion != indiceActual) {
-            cargarCancion(seleccion);
-        } else {
-            reproductor.reproducir();
-            lblDescripcion.setText("Reproduciendo");
-        }
-    }
-
-    private void cargarCancion(int indice) {
-        if (canciones == null || indice < 0 || indice >= canciones.length) {
-            return;
-        }
-
-        try {
-            File archivo = canciones[indice];
-
-            reproductor.cargarCancion(archivo);
-
-            indiceActual = indice;
-
-            listaCanciones.setSelectedIndex(indice);
-
-            lblCancion.setText(archivo.getName());
-            lblDescripcion.setText("Reproduciendo");
-            lblCaratula.setText("♫");
-
-            progreso.setValue(0);
-
             reproductor.reproducir();
 
-        } catch (Exception ex) {
-            indiceActual = -1;
+            SwingUtilities.invokeLater(() -> {
+                if (cerrado) {
+                    return;
+                }
 
-            progreso.setValue(0);
+                titulo.setText(metadata.getTitulo());
 
-            lblCancion.setText("No se pudo cargar");
-            lblDescripcion.setText("Formato no compatible");
+                descripcion.setText(
+                        metadata.getArtista() + " — "
+                        + metadata.getAlbum() + " — "
+                        + metadata.getAnio()
+                );
 
-            JOptionPane.showMessageDialog(this, "No se pudo reproducir la canción:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void siguienteCancion() {
-        if (canciones == null || canciones.length == 0) {
-            return;
-        }
-
-        if (indiceActual == -1) {
-            cargarCancion(0);
-            return;
-        }
-
-        int siguiente = indiceActual + 1;
-
-        if (siguiente >= canciones.length) {
-            siguiente = 0;
-        }
-
-        cargarCancion(siguiente);
-    }
-
-    private void iniciarHilo() {
-        hiloReproductor = new HiloReproductor(reproductor, progreso);
-
-        hiloReproductor.setAccionCancionTerminada(() -> {
-            siguienteCancion();
+                ImagenTemporal.cargar(
+                        caratula,
+                        () -> metadata.getCaratula() != null
+                                ? metadata.getCaratula()
+                                : ImagenesInsta.dibujar(
+                                        metadata.getTitulo(),
+                                        0x425b76
+                                ),
+                        250,
+                        250
+                );
+            });
         });
+    }
 
-        hiloReproductor.start();
+    private interface Trabajo {
+        void ejecutar() throws Exception;
+    }
+
+    private void tarea(Trabajo trabajo) {
+        if (cerrado) {
+            return;
+        }
+
+        hilo.execute(() -> {
+            if (cerrado) {
+                return;
+            }
+
+            try {
+                trabajo.ejecutar();
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    if (!cerrado) {
+                        descripcion.setText(
+                                "No se pudo completar: " + e.getMessage()
+                        );
+                    }
+                });
+            }
+        });
     }
 
     public void cerrarReproductor() {
-        if (hiloReproductor != null) {
-            hiloReproductor.detenerHilo();
-            hiloReproductor = null;
+        if (cerrado) {
+            return;
         }
 
-        reproductor.cerrar();
-
-        if (accionCerrar != null) {
-            accionCerrar.run();
-        }
+        cerrado = true;
+        hilo.execute(reproductor::cerrar);
+        hilo.shutdown();
     }
 
-    public JButton getBtnPlay() {
-        return btnPlay;
-    }
-
-    public JButton getBtnPause() {
-        return btnPause;
-    }
-
-    public JButton getBtnStop() {
-        return btnStop;
-    }
-
-    public JList<String> getListaCanciones() {
-        return listaCanciones;
-    }
-
-    public DefaultListModel<String> getModeloCanciones() {
-        return modeloCanciones;
-    }
-
-    public JLabel getLblCaratula() {
-        return lblCaratula;
-    }
-
-    public JLabel getLblCancion() {
-        return lblCancion;
-    }
-
-    public JLabel getLblDescripcion() {
-        return lblDescripcion;
-    }
-
-    public JSlider getProgreso() {
-        return progreso;
-    }
-
-    public void setAccionCerrar(Runnable accionCerrar) {
-        this.accionCerrar = accionCerrar;
+    public void setAccionCerrar(Runnable accion) {
+        accionCerrar = accion;
     }
 
     public void cerrar() {
         cerrarReproductor();
+
+        if (accionCerrar != null) {
+            accionCerrar.run();
+        }
     }
 }

@@ -4,7 +4,7 @@
  */
 package red;
 import java.io.Serializable;
-import java.util.Objects;
+
 /**
  *
  * @author diego
@@ -37,6 +37,7 @@ public class Solicitud implements Serializable {
         ENVIAR_MENSAJE,
         ENVIAR_STICKER,
         CONVERSACION,
+        CONVERSACIONES,
         LEER_CONVERSACION,
         ELIMINAR_CONVERSACION,
         NO_LEIDOS,
@@ -72,36 +73,20 @@ public class Solicitud implements Serializable {
             int edad
     ) {
         return new Solicitud(
-                Operacion.REGISTRAR_USUARIO,
-                "",
-                null,
-                nombre,
-                String.valueOf(genero),
-                username,
-                password,
-                String.valueOf(edad)
+                Operacion.REGISTRAR_USUARIO, "", null,
+                nombre, String.valueOf(genero), username,
+                password, String.valueOf(edad)
         );
     }
 
-    public static Solicitud iniciarSesion(
-            String username,
-            String password
-    ) {
+    public static Solicitud iniciarSesion(String username, String password) {
         return new Solicitud(
-                Operacion.INICIAR_SESION,
-                "",
-                null,
-                username,
-                password
+                Operacion.INICIAR_SESION, "", null, username, password
         );
     }
 
     public static Solicitud cerrarSesion(String token) {
-        return new Solicitud(
-                Operacion.CERRAR_SESION,
-                token,
-                null
-        );
+        return new Solicitud(Operacion.CERRAR_SESION, token, null);
     }
 
     public Operacion getOperacion() {
@@ -117,12 +102,10 @@ public class Solicitud implements Serializable {
     }
 
     public String arg(int indice) {
-        if (argumentos == null
-                || indice >= argumentos.length
+        if (argumentos == null || indice >= argumentos.length
                 || argumentos[indice] == null) {
             throw new IllegalArgumentException("Faltan datos.");
         }
-
         return argumentos[indice];
     }
 }

@@ -1,8 +1,12 @@
 
+
 package multimedia;
 
 import java.io.File;
-import javax.sound.sampled.*;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 
 public class ReproductorMusica {
 
@@ -16,15 +20,42 @@ public class ReproductorMusica {
     }
 
     public void cargarCancion(File archivo) throws Exception {
+        if (archivo == null || !archivo.exists()) {
+            throw new IllegalArgumentException("El archivo no existe.");
+        }
+
         cerrarClipActual();
 
-        AudioInputStream audio = AudioSystem.getAudioInputStream(archivo);
+        AudioInputStream audioOriginal = AudioSystem.getAudioInputStream(
+                archivo
+        );
+
+        AudioFormat formatoOriginal = audioOriginal.getFormat();
+
+        AudioFormat formatoDecodificado = new AudioFormat(
+                AudioFormat.Encoding.PCM_SIGNED,
+                formatoOriginal.getSampleRate(),
+                16,
+                formatoOriginal.getChannels(),
+                formatoOriginal.getChannels() * 2,
+                formatoOriginal.getSampleRate(),
+                false
+        );
+
+        AudioInputStream audioDecodificado = AudioSystem.getAudioInputStream(
+                formatoDecodificado,
+                audioOriginal
+        );
+
         clip = AudioSystem.getClip();
-        clip.open(audio);
-        audio.close();
+        clip.open(audioDecodificado);
+
+        audioDecodificado.close();
+        audioOriginal.close();
 
         posicionPausa = 0;
         pausado = false;
+
         clip.setMicrosecondPosition(0);
     }
 
@@ -65,6 +96,7 @@ public class ReproductorMusica {
 
         clip.stop();
         clip.setMicrosecondPosition(0);
+
         posicionPausa = 0;
         pausado = false;
     }
@@ -129,7 +161,9 @@ public class ReproductorMusica {
             return false;
         }
 
-        return clip.getMicrosecondLength() > 0 && clip.getMicrosecondPosition() >= clip.getMicrosecondLength();
+        return clip.getMicrosecondLength() > 0
+                && clip.getMicrosecondPosition()
+                >= clip.getMicrosecondLength();
     }
 
     private void cerrarClipActual() {
