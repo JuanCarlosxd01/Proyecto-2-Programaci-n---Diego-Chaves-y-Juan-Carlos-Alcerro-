@@ -119,10 +119,6 @@ public class GestorUsuarios {
     }
 
     public boolean eliminarUsuario(String username) {
-        if (!Sesion.esAdministrador()) {
-            return false;
-        }
-
         if (username == null || username.isBlank()) {
             return false;
         }
@@ -133,7 +129,15 @@ public class GestorUsuarios {
             return false;
         }
 
-        if (usuario.esAdministrador()) {
+        if (usuario.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO)) {
+            return false;
+        }
+
+        UsuarioSistema actual = Sesion.getUsuarioActual();
+        boolean esPrincipal = actual != null && actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
+        boolean esPropiaCuenta = actual != null && actual.getUsername().equalsIgnoreCase(usuario.getUsername());
+
+        if (!esPrincipal && !esPropiaCuenta) {
             return false;
         }
 
@@ -187,41 +191,62 @@ public class GestorUsuarios {
     }
 
     public boolean desactivarUsuario(String username) {
-        if (!Sesion.esAdministrador()) {
+        if (username == null || username.isBlank()) {
             return false;
         }
 
         UsuarioSistema usuario = buscarUsuario(username);
+        UsuarioSistema actual = Sesion.getUsuarioActual();
 
-        if (usuario == null) {
+        if (usuario == null || actual == null) {
             return false;
         }
 
-        if (usuario.esAdministrador()) {
+        if (usuario.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO)) {
             return false;
         }
 
+        boolean esPrincipal = actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
+        boolean esPropiaCuenta = actual.getUsername().equalsIgnoreCase(usuario.getUsername());
+
+        if (!esPrincipal && !esPropiaCuenta) {
+            return false;
+        }
+
+        boolean estadoAnterior = usuario.estaActivo();
         usuario.setActivo(false);
 
-        gestorBinario.guardarUsuarios(usuarios);
+        if (!gestorBinario.guardarUsuarios(usuarios)) {
+            usuario.setActivo(estadoAnterior);
+            return false;
+        }
 
         return true;
     }
 
     public boolean activarUsuario(String username) {
-        if (!Sesion.esAdministrador()) {
+        if (username == null || username.isBlank()) {
             return false;
         }
 
+        UsuarioSistema actual = Sesion.getUsuarioActual();
         UsuarioSistema usuario = buscarUsuario(username);
 
-        if (usuario == null) {
+        if (actual == null || usuario == null) {
             return false;
         }
 
+        if (!actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO)) {
+            return false;
+        }
+
+        boolean estadoAnterior = usuario.estaActivo();
         usuario.setActivo(true);
 
-        gestorBinario.guardarUsuarios(usuarios);
+        if (!gestorBinario.guardarUsuarios(usuarios)) {
+            usuario.setActivo(estadoAnterior);
+            return false;
+        }
 
         return true;
     }
@@ -232,22 +257,26 @@ public class GestorUsuarios {
         }
 
         UsuarioSistema usuario = buscarUsuario(username);
+        UsuarioSistema actual = Sesion.getUsuarioActual();
 
-        if (usuario == null || !UsuarioSistema.contrasenaValida(nuevaContrasena)) {
+        if (usuario == null || actual == null || !UsuarioSistema.contrasenaValida(nuevaContrasena)) {
             return false;
         }
 
-        if (!Sesion.esAdministrador()) {
-            UsuarioSistema usuarioActual = Sesion.getUsuarioActual();
+        boolean esPrincipal = actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
+        boolean esPropiaCuenta = actual.getUsername().equalsIgnoreCase(usuario.getUsername());
 
-            if (usuarioActual == null || !usuarioActual.getUsername().equalsIgnoreCase(username)) {
-                return false;
-            }
+        if (!esPrincipal && !esPropiaCuenta) {
+            return false;
         }
 
+        String anterior = usuario.getContrasena();
         usuario.setContrasena(nuevaContrasena);
 
-        gestorBinario.guardarUsuarios(usuarios);
+        if (!gestorBinario.guardarUsuarios(usuarios)) {
+            usuario.setContrasena(anterior);
+            return false;
+        }
 
         return true;
     }

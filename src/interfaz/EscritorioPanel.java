@@ -692,7 +692,7 @@ public class EscritorioPanel extends JPanel {
             ventana.add(explorador);
         }
         else if(nombre.equals("Configuración")){
-            ConfiguracionEscritorioPanel config = new ConfiguracionEscritorioPanel(new ConfiguracionEscritorioPanel.Listener() {
+            ConfiguracionEscritorioPanel config = new ConfiguracionEscritorioPanel(gestorUsuarios, new ConfiguracionEscritorioPanel.Listener() {
                 @Override
                 public void seleccionarFondo(File archivo) {
                     aplicarFondoImagen(archivo);
@@ -705,7 +705,12 @@ public class EscritorioPanel extends JPanel {
 
                 @Override
                 public void restaurarFondo() {
-                    EscritorioPanel.this.restaurarFondo();;
+                    EscritorioPanel.this.restaurarFondo();
+                }
+
+                @Override
+                public void cuentaFinalizada() {
+                    cerrarSesion();
                 }
             });
             ventana.add(config);

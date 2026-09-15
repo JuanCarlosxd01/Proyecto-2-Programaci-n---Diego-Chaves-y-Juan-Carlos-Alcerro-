@@ -23,12 +23,12 @@ public class MiniWindowsProyecto2 {
     }
 
     private static void asegurarServidorCompartido() {
-        if (servidorDisponible()) {
+        if (servidorDisponible()) { 
             System.out.println("Servidor INSTA+ existente detectado. Esta instancia funcionará como cliente.");
             return;
         }
 
-        try {
+        try { 
             String java = new File(System.getProperty("java.home"), "bin" + File.separator + "java").getAbsolutePath();
             String classpath = System.getProperty("java.class.path");
             ProcessBuilder proceso = new ProcessBuilder(java, "-cp", classpath, "red.ServidorPrincipal");
