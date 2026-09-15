@@ -265,23 +265,11 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
     }
 
     private void seleccionarFoto() {
-        JFileChooser selector = new JFileChooser();
-        selector.setDialogTitle("Seleccionar foto de perfil");
-
-        FileNameExtensionFilter filtro = new FileNameExtensionFilter("Imágenes PNG o JPG", "png", "jpg", "jpeg");
-        selector.setFileFilter(filtro);
-
-        int resultado = selector.showOpenDialog(this);
-
-        if (resultado != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File archivo = selector.getSelectedFile();
+        File archivo = SelectorArchivosZ.seleccionarImagen(this, "Seleccionar foto de perfil");
+        if (archivo == null) return;
 
         try {
             BufferedImage imagen = ImageIO.read(archivo);
-
             if (imagen == null) {
                 DialogosWindows.showMessageDialog(this, "El archivo seleccionado no es una imagen válida.", "Foto de perfil", JOptionPane.ERROR_MESSAGE);
                 return;
@@ -289,14 +277,10 @@ public class CrearCuentaInstaPanel extends JPanel implements Tematizable {
 
             ByteArrayOutputStream salida = new ByteArrayOutputStream();
             ImageIO.write(imagen, "png", salida);
-
             fotoSeleccionada = salida.toByteArray();
-
             Image escalada = imagen.getScaledInstance(90, 90, Image.SCALE_SMOOTH);
-
             lblFoto.setText("");
             lblFoto.setIcon(new ImageIcon(escalada));
-
         } catch (IOException e) {
             DialogosWindows.showMessageDialog(this, "No se pudo cargar la imagen.", "Foto de perfil", JOptionPane.ERROR_MESSAGE);
         }

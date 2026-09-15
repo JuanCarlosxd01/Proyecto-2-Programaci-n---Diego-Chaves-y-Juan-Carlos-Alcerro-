@@ -40,7 +40,7 @@ public class ExploradorPanel extends JPanel {
         carpetaRaiz = RutasSistema.getRaizExplorador();
 
         if (carpetaRaiz == null) {
-            carpetaRaiz = RutasSistema.getRaizSistema();
+            throw new IllegalStateException("No hay una sesión activa para abrir el Explorador.");
         }
 
         if (!carpetaRaiz.exists()) {

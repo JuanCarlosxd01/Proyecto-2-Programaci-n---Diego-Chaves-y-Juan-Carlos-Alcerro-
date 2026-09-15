@@ -77,11 +77,15 @@ public class GestorUsuarios {
     }
 
     public boolean crearUsuario(String username, String contrasena) {
+        return crearUsuario(username, contrasena, TipoUsuario.ESTANDAR);
+    }
+
+    public boolean crearUsuario(String username, String contrasena, TipoUsuario tipo) {
         if (!Sesion.esAdministrador()) {
             return false;
         }
 
-        if (username == null || contrasena == null) {
+        if (username == null || contrasena == null || tipo == null) {
             return false;
         }
 
@@ -99,11 +103,7 @@ public class GestorUsuarios {
             return false;
         }
 
-        UsuarioSistema nuevo = new UsuarioSistema(
-                username,
-                contrasena,
-                TipoUsuario.ESTANDAR
-        );
+        UsuarioSistema nuevo = new UsuarioSistema(username, contrasena, tipo);
 
         usuarios.add(nuevo);
 

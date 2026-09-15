@@ -193,11 +193,8 @@ public class PublicarPanel extends JPanel implements Tematizable {
     }
 
     private void seleccionarImagen() {
-        File carpetaInicial = RutasSistema.getImagenesUsuarioActual();
-        JFileChooser selector = carpetaInicial != null && carpetaInicial.exists() ? new JFileChooser(carpetaInicial) : new JFileChooser();
-        selector.setFileFilter(new FileNameExtensionFilter("Imágenes PNG, JPG y JPEG", "png", "jpg", "jpeg"));
-        if (selector.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
-        imagenSeleccionada = selector.getSelectedFile();
+        imagenSeleccionada = SelectorArchivosZ.seleccionarImagen(this, "Seleccionar imagen para publicación");
+        if (imagenSeleccionada == null) return;
         stickerSeleccionado = null;
         mostrarVistaPrevia(new ImageIcon(imagenSeleccionada.getAbsolutePath()));
     }

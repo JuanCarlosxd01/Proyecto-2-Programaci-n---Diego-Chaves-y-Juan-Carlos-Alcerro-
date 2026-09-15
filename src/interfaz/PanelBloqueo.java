@@ -105,6 +105,7 @@ public class PanelBloqueo extends JPanel{
         btnApagar.setContentAreaFilled(false);
         btnApagar.setBorderPainted(false);
         btnApagar.setFocusPainted(false);
+        btnApagar.setFocusable(false);
         btnApagar.setOpaque(false);
 
         btnApagar.setCursor(new Cursor(Cursor.HAND_CURSOR));

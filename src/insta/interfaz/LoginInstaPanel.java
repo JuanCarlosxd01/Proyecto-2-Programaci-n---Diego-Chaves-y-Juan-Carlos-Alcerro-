@@ -47,20 +47,24 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
         lblSubtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel lblUsuario = new JLabel("Username");
-        lblUsuario.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblUsuario.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblUsuario.setHorizontalAlignment(SwingConstants.CENTER);
 
         txtUsuario = new JTextField();
         txtUsuario.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         txtUsuario.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txtUsuario.setHorizontalAlignment(SwingConstants.CENTER);
         txtUsuario.setBorder(new EmptyBorder(10, 12, 10, 12));
 
         JLabel lblPassword = new JLabel("Contraseña");
-        lblPassword.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblPassword.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblPassword.setHorizontalAlignment(SwingConstants.CENTER);
 
         panelPassword = new JPanel(new BorderLayout());
 
         txtPassword = new JPasswordField();
         txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txtPassword.setHorizontalAlignment(SwingConstants.CENTER);
         txtPassword.setBorder(new EmptyBorder(10, 12, 10, 12));
 
         caracterPassword = txtPassword.getEchoChar();
@@ -72,6 +76,10 @@ public class LoginInstaPanel extends JPanel implements Tematizable {
 
         btnVerPassword.addActionListener(e -> mostrarOcultarPassword());
 
+        JPanel espacioPassword = new JPanel();
+        espacioPassword.setOpaque(false);
+        espacioPassword.setPreferredSize(new Dimension(45, 42));
+        panelPassword.add(espacioPassword, BorderLayout.WEST);
         panelPassword.add(txtPassword, BorderLayout.CENTER);
         panelPassword.add(btnVerPassword, BorderLayout.EAST);
         panelPassword.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));

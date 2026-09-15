@@ -9,6 +9,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import red.Cliente;
 import red.Respuesta;
+import java.util.function.Consumer;
 
 public class PerfilPanel extends JPanel implements Tematizable {
 
@@ -39,6 +40,7 @@ public class PerfilPanel extends JPanel implements Tematizable {
     private JButton btnSeguir;
 
     private Cliente cliente;
+    private Consumer<String> accionAbrirPerfil;
 
     public PerfilPanel(Cliente cliente) {
         this.cliente = cliente;
@@ -49,6 +51,10 @@ public class PerfilPanel extends JPanel implements Tematizable {
         crearPublicaciones();
 
         aplicarTema();
+    }
+
+    public void setAccionAbrirPerfil(Consumer<String> accionAbrirPerfil) {
+        this.accionAbrirPerfil = accionAbrirPerfil;
     }
 
     private void crearPerfil() {
@@ -305,7 +311,7 @@ public class PerfilPanel extends JPanel implements Tematizable {
         TarjetaPublicacionPanel tarjeta = new TarjetaPublicacionPanel(cliente, publicacion, () -> {
             cargarPublicaciones(publicacion.getAutor());
             layoutPublicaciones.show(panelCentroPublicaciones, "GRID");
-        });
+        }, accionAbrirPerfil);
         JPanel centro = new JPanel(new BorderLayout());
         centro.setBorder(new EmptyBorder(5, 40, 20, 40));
         centro.setBackground(TemaInsta.FONDO);

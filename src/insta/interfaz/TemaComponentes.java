@@ -40,6 +40,14 @@ final class TemaComponentes {
             combo.setOpaque(true);
             combo.setBackground(TemaInsta.INPUT);
             combo.setForeground(TemaInsta.TEXTO);
+            combo.setRenderer((list, value, index, isSelected, cellHasFocus) -> {
+                javax.swing.JLabel label = new javax.swing.JLabel(value == null ? "" : value.toString());
+                label.setOpaque(true);
+                label.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+                label.setBackground(isSelected ? TemaInsta.BOTON : TemaInsta.INPUT);
+                label.setForeground(isSelected ? TemaInsta.BOTON_TEXTO : TemaInsta.TEXTO);
+                return label;
+            });
 
             for (Component hijo : combo.getComponents()) {
                 if (hijo instanceof AbstractButton botonCombo) {

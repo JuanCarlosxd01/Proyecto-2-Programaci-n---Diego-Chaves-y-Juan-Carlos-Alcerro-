@@ -44,6 +44,8 @@ public class InstaPanel extends JPanel {
     private JLabel lblLogo;
     private JLabel lblUsuario;
     private JLabel lblNotificacion;
+    private JLabel lblSol;
+    private JLabel lblLuna;
 
     private JTextField txtBusquedaGeneral;
 
@@ -186,12 +188,12 @@ public class InstaPanel extends JPanel {
         JPanel derecha = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 5));
         derecha.setOpaque(false);
 
-        JLabel lblSol = new JLabel("☀");
+        lblSol = new JLabel("☀");
         lblSol.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 20));
 
         switchTema = new SwitchTema();
 
-        JLabel lblLuna = new JLabel("☾");
+        lblLuna = new JLabel("☾");
         lblLuna.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 20));
 
         lblNotificacion = new JLabel("");
@@ -221,6 +223,14 @@ public class InstaPanel extends JPanel {
 
         timelinePanel = new TimelinePanel(cliente);
         perfilPanel = new PerfilPanel(cliente);
+        timelinePanel.setAccionAbrirPerfil(username -> {
+            cargarPerfil(username);
+            mostrarPanel("PERFIL");
+        });
+        perfilPanel.setAccionAbrirPerfil(username -> {
+            cargarPerfil(username);
+            mostrarPanel("PERFIL");
+        });
         publicarPanel = new PublicarPanel(cliente);
         interaccionesPanel = new InteraccionesPanel(cliente);
         buscarPanel = new BuscarPanel(cliente);
@@ -231,6 +241,7 @@ public class InstaPanel extends JPanel {
             Respuesta.DatosUsuario actual = cliente.getUsuarioActual();
             if (actual != null) {
                 inboxPanel.invalidarAvatar(actual.getUsername());
+                timelinePanel.actualizarHistorias();
                 cargarPerfil(actual.getUsername());
             }
         });
@@ -482,6 +493,8 @@ public class InstaPanel extends JPanel {
 
         lblLogo.setForeground(TemaInsta.TEXTO);
         lblUsuario.setForeground(TemaInsta.TEXTO);
+        lblSol.setForeground(TemaInsta.TEXTO);
+        lblLuna.setForeground(TemaInsta.TEXTO);
 
         txtBusquedaGeneral.setBackground(TemaInsta.INPUT);
         txtBusquedaGeneral.setForeground(TemaInsta.TEXTO);

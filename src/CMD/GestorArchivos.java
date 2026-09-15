@@ -20,7 +20,7 @@ public class GestorArchivos {
     public GestorArchivos() {
         File raiz = RutasSistema.getRaizExplorador();
         if (raiz == null) {
-            raiz = RutasSistema.getRaizSistema();
+            throw new IllegalStateException("No hay una sesión activa para abrir CMD.");
         }
         if (!raiz.exists()) {
             raiz.mkdirs();
@@ -274,7 +274,7 @@ public class GestorArchivos {
 
             return archivoCanonico.toPath().startsWith(raizCanonica.toPath());
 
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             return false;
         }
     }
@@ -285,8 +285,8 @@ public class GestorArchivos {
         }
         try {
             return archivo.getCanonicalFile();
-        } catch (IOException e) {
-            return archivo.getAbsoluteFile();
+        } catch (IOException | RuntimeException e) {
+            return null;
         }
     }
 }

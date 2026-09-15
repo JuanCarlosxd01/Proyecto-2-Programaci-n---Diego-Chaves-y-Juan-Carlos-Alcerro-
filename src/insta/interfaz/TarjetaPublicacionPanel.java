@@ -12,27 +12,10 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Image;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.DefaultListModel;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.ListSelectionModel;
-import javax.swing.SwingConstants;
-import javax.swing.SwingWorker;
+import java.util.*;
+import java.util.function.Consumer;
+import javax.swing.*;
 import static javax.swing.WindowConstants.DISPOSE_ON_CLOSE;
 import javax.swing.border.EmptyBorder;
 import red.Cliente;
@@ -43,6 +26,7 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
     private final Cliente cliente;
     private Publicacion publicacion;
     private final Runnable accionActualizar;
+    private final Consumer<String> accionAbrirPerfil;
 
     private JPanel encabezado;
     private JPanel contenido;
@@ -51,12 +35,19 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
     private JButton btnComentarios;
 
     public TarjetaPublicacionPanel(Cliente cliente, Publicacion publicacion, Runnable accionActualizar) {
+        this(cliente, publicacion, accionActualizar, null);
+    }
+
+    public TarjetaPublicacionPanel(Cliente cliente, Publicacion publicacion, Runnable accionActualizar, Consumer<String> accionAbrirPerfil) {
         this.cliente = cliente;
         this.publicacion = publicacion;
         this.accionActualizar = accionActualizar;
+        this.accionAbrirPerfil = accionAbrirPerfil;
 
         setLayout(new BorderLayout());
-        setMaximumSize(new Dimension(620, 700));
+        setPreferredSize(new Dimension(620, publicacion.esTexto() ? 155 : 500));
+        setMaximumSize(new Dimension(620, publicacion.esTexto() ? 155 : 500));
+        setMinimumSize(new Dimension(620, publicacion.esTexto() ? 155 : 500));
         setAlignmentX(Component.CENTER_ALIGNMENT);
         setBorder(BorderFactory.createLineBorder(TemaInsta.BORDE));
 
@@ -70,22 +61,74 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
         encabezado = new JPanel(new BorderLayout());
         encabezado.setBorder(new EmptyBorder(10, 15, 10, 15));
 
+        JPanel autorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        autorPanel.setOpaque(false);
+
+        JLabel lblFotoAutor = new JLabel(publicacion.getAutor().substring(0, 1).toUpperCase(), SwingConstants.CENTER);
+        lblFotoAutor.setPreferredSize(new Dimension(38, 38));
+        lblFotoAutor.setMinimumSize(new Dimension(38, 38));
+        lblFotoAutor.setMaximumSize(new Dimension(38, 38));
+        lblFotoAutor.setOpaque(true);
+        lblFotoAutor.setBackground(TemaInsta.INPUT);
+        lblFotoAutor.setBorder(BorderFactory.createLineBorder(TemaInsta.BORDE));
+
         JLabel lblUsuario = new JLabel("@" + publicacion.getAutor() + " escribió:");
         lblUsuario.setFont(new Font("Arial", Font.BOLD, 14));
+        lblUsuario.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        lblFotoAutor.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        java.awt.event.MouseAdapter abrirPerfil = new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (accionAbrirPerfil != null) accionAbrirPerfil.accept(publicacion.getAutor());
+            }
+        };
+        lblUsuario.addMouseListener(abrirPerfil);
+        lblFotoAutor.addMouseListener(abrirPerfil);
+        autorPanel.add(lblFotoAutor);
+        autorPanel.add(lblUsuario);
+        cargarFotoAutor(lblFotoAutor);
 
         DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         JLabel lblFecha = new JLabel("— " + publicacion.getFechaPublicacion().format(formato));
         lblFecha.setFont(new Font("Arial", Font.PLAIN, 11));
 
-        encabezado.add(lblUsuario, BorderLayout.WEST);
+        encabezado.add(autorPanel, BorderLayout.WEST);
         encabezado.add(lblFecha, BorderLayout.EAST);
         add(encabezado, BorderLayout.NORTH);
+    }
+
+    private void cargarFotoAutor(JLabel label) {
+        SwingWorker<ImageIcon, Void> trabajador = new SwingWorker<>() {
+            @Override
+            protected ImageIcon doInBackground() throws Exception {
+                Respuesta perfil = cliente.perfil(publicacion.getAutor());
+                if (!perfil.esExitosa() || perfil.getUsuario() == null) return null;
+                String ruta = perfil.getUsuario().getRutaFotoPerfil();
+                if (ruta == null || ruta.isBlank()) return null;
+                Respuesta imagen = cliente.descargarImagen(ruta);
+                if (!imagen.esExitosa() || imagen.getArchivo() == null) return null;
+                return ImagenUI.ajustar(imagen.getArchivo(), 34, 34);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    ImageIcon icono = get();
+                    if (icono != null) {
+                        label.setText("");
+                        label.setIcon(icono);
+                    }
+                } catch (Exception e) {
+                }
+            }
+        };
+        trabajador.execute();
     }
 
     private void crearContenido() {
         contenido = new JPanel();
         contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
-        contenido.setBorder(new EmptyBorder(15, 15, 15, 15));
+        contenido.setBorder(new EmptyBorder(10, 15, 8, 15));
 
         if (publicacion.esTexto()) {
             JLabel texto = new JLabel("<html><div style='width:540px;'>" + escaparHtml(publicacion.getContenido()) + "</div></html>");
@@ -97,18 +140,24 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
             int ancho = sticker ? 250 : 550;
             int alto = sticker ? 250 : 350;
 
+            JPanel contenedorImagen = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            contenedorImagen.setOpaque(false);
+            contenedorImagen.setAlignmentX(Component.CENTER_ALIGNMENT);
+            contenedorImagen.setMaximumSize(new Dimension(590, alto));
             JLabel imagen = new JLabel(sticker ? "Cargando sticker..." : "Cargando imagen...", SwingConstants.CENTER);
             imagen.setPreferredSize(new Dimension(ancho, alto));
+            imagen.setMinimumSize(new Dimension(ancho, alto));
             imagen.setMaximumSize(new Dimension(ancho, alto));
             imagen.setOpaque(true);
-            imagen.setAlignmentX(Component.CENTER_ALIGNMENT);
-            contenido.add(imagen);
+            contenedorImagen.add(imagen);
+            contenido.add(contenedorImagen);
             cargarImagen(imagen, ancho, alto);
 
             if (!publicacion.getContenido().isBlank()) {
                 contenido.add(Box.createVerticalStrut(10));
                 JLabel descripcion = new JLabel("<html><div style='width:540px;'>" + escaparHtml(publicacion.getContenido()) + "</div></html>");
-                descripcion.setAlignmentX(Component.LEFT_ALIGNMENT);
+                descripcion.setAlignmentX(Component.CENTER_ALIGNMENT);
+                descripcion.setMaximumSize(new Dimension(550, 80));
                 contenido.add(descripcion);
             }
         }
@@ -117,9 +166,11 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
     }
 
     private void crearAcciones() {
-        acciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
+        acciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         btnLike = new JButton(textoLike());
-        btnComentarios = new JButton("💬 " + publicacion.getCantidadComentarios());
+        btnComentarios = new JButton("✉ " + publicacion.getCantidadComentarios());
+        btnLike.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 13));
+        btnComentarios.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 13));
 
         btnLike.addActionListener(e -> alternarLike());
         btnComentarios.addActionListener(e -> mostrarComentarios());
@@ -215,7 +266,7 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
         inferior.add(new JScrollPane(txtComentario), BorderLayout.CENTER);
 
         JPanel botones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnStickerComentario = new JButton("☺ Sticker");
+        JButton btnStickerComentario = new JButton("Sticker");
         JButton btnAgregar = new JButton("Comentar");
         JButton btnBorrar = new JButton("Eliminar mío");
         botones.add(btnStickerComentario);
@@ -242,7 +293,7 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
         btnAgregar.setForeground(TemaInsta.BOTON_TEXTO);
         TemaComponentes.corregirContraste(panel);
 
-        JDialogSimple dialogo = new JDialogSimple(panel, "Comentarios", new Dimension(540, 460));
+        Runnable cerrarComentarios = PanelSuperpuestoInsta.mostrar(this, "Comentarios", panel, new Dimension(540, 460));
 
         btnAgregar.addActionListener(e -> {
             String texto = txtComentario.getText().trim();
@@ -254,7 +305,7 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
             });
         });
 
-        btnStickerComentario.addActionListener(e -> seleccionarStickerComentario(dialogo, stickerId -> {
+        btnStickerComentario.addActionListener(e -> seleccionarStickerComentario(panel, stickerId -> {
             btnStickerComentario.setEnabled(false);
             ejecutarComentarioEnDialogo(() -> cliente.comentarSticker(publicacion.getAutor(), publicacion.getId(), stickerId), modelo, lista, iconosSticker, () -> btnStickerComentario.setEnabled(true));
         }));
@@ -263,14 +314,13 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
             Comentario seleccionado = lista.getSelectedValue();
             Respuesta.DatosUsuario actual = cliente.getUsuarioActual();
             if (seleccionado == null || actual == null || !seleccionado.getAutor().equals(actual.getUsername())) {
-                DialogosWindows.showMessageDialog(dialogo, "Selecciona uno de tus comentarios.");
+                DialogosWindows.showMessageDialog(panel, "Selecciona uno de tus comentarios.");
                 return;
             }
             btnBorrar.setEnabled(false);
             ejecutarComentarioEnDialogo(() -> cliente.eliminarComentario(publicacion.getAutor(), publicacion.getId(), seleccionado.getId()), modelo, lista, iconosSticker, () -> btnBorrar.setEnabled(true));
         });
 
-        dialogo.mostrar(this);
     }
 
     private void ejecutarComentarioEnDialogo(AccionRemota accion, DefaultListModel<Comentario> modelo, JList<Comentario> lista, Map<String, ImageIcon> cache, Runnable alFinalizar) {
@@ -293,7 +343,7 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
                         modelo.clear();
                         cache.clear();
                         for (Comentario comentario : actualizada.getComentarios()) modelo.addElement(comentario);
-                        btnComentarios.setText("💬 " + actualizada.getCantidadComentarios());
+                        btnComentarios.setText("✉ " + actualizada.getCantidadComentarios());
                         if (!modelo.isEmpty()) lista.ensureIndexIsVisible(modelo.size() - 1);
                     }
                 } catch (Exception e) {
@@ -382,10 +432,6 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
 
 
     private void mostrarSelectorStickerEncima(Component padre, JList<StickerItem> galeria, JScrollPane scroll, java.util.function.Consumer<String> alSeleccionar) {
-        java.awt.Window owner = javax.swing.SwingUtilities.getWindowAncestor(padre);
-        javax.swing.JDialog selector = new javax.swing.JDialog(owner, "Sticker como comentario", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
-        selector.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
         JPanel contenidoSelector = new JPanel(new BorderLayout(8, 8));
         contenidoSelector.setBorder(new EmptyBorder(12, 12, 12, 12));
         contenidoSelector.add(scroll, BorderLayout.CENTER);
@@ -398,12 +444,13 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
         botonesSelector.add(enviar);
         contenidoSelector.add(botonesSelector, BorderLayout.SOUTH);
 
+        Runnable cerrar = PanelSuperpuestoInsta.mostrar(padre, "Sticker como comentario", contenidoSelector, new Dimension(470, 340));
         galeria.addListSelectionListener(e -> enviar.setEnabled(galeria.getSelectedValue() != null));
-        cancelar.addActionListener(e -> selector.dispose());
+        cancelar.addActionListener(e -> cerrar.run());
         enviar.addActionListener(e -> {
             StickerItem seleccionado = galeria.getSelectedValue();
             if (seleccionado == null) return;
-            selector.dispose();
+            cerrar.run();
             if (alSeleccionar != null) alSeleccionar.accept(seleccionado.sticker.getId());
         });
         galeria.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -424,13 +471,6 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
         enviar.setBackground(TemaInsta.BOTON);
         enviar.setForeground(TemaInsta.BOTON_TEXTO);
         TemaComponentes.corregirContraste(contenidoSelector);
-
-        selector.setContentPane(contenidoSelector);
-        selector.pack();
-        selector.setMinimumSize(new Dimension(470, 340));
-        selector.setLocationRelativeTo(padre);
-        selector.setAlwaysOnTop(true);
-        selector.setVisible(true);
     }
 
     private static final class StickerItem {
@@ -511,9 +551,15 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
                         DialogosWindows.showMessageDialog(TarjetaPublicacionPanel.this, respuesta.getMensaje(), "INSTA+", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
-                    if (accionActualizar != null) {
-                        accionActualizar.run();
+                    ListaEnlazada<Publicacion> actualizadas = respuesta.getPublicaciones();
+                    if (actualizadas != null && !actualizadas.isEmpty()) {
+                        publicacion = actualizadas.obtener(0);
+                        btnLike.setText(textoLike());
+                        btnComentarios.setText("✉ " + publicacion.getCantidadComentarios());
+                        revalidate();
+                        repaint();
                     }
+                    if (accionActualizar != null) accionActualizar.run();
                 } catch (Exception e) {
                     DialogosWindows.showMessageDialog(TarjetaPublicacionPanel.this, mensaje(e), "INSTA+", JOptionPane.ERROR_MESSAGE);
                 }
@@ -588,18 +634,4 @@ public class TarjetaPublicacionPanel extends JPanel implements Tematizable {
         Respuesta ejecutar() throws Exception;
     }
 
-    private static final class JDialogSimple extends javax.swing.JDialog {
-        private JDialogSimple(JPanel contenido, String titulo, Dimension tamano) {
-            setTitle(titulo);
-            setModal(true);
-            setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-            setContentPane(contenido);
-            setSize(tamano);
-        }
-
-        private void mostrar(Component padre) {
-            setLocationRelativeTo(padre);
-            setVisible(true);
-        }
-    }
 }

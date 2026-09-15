@@ -4,6 +4,8 @@ package CMD;
 import interfaz.CMDPanel;
 import java.io.*;
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 import java.text.SimpleDateFormat;
 
 public class controladorComandos {
@@ -27,7 +29,13 @@ public class controladorComandos {
         if(entrada.isEmpty()){
             return;
         }
-        String[] partes = entrada.split("\\s+");
+        String[] partes;
+        try {
+            partes = separarArgumentos(entrada);
+        } catch (IllegalArgumentException e) {
+            consola.imprimir(e.getMessage());
+            return;
+        }
         String comandoOriginal = partes[0];
         String comando = comandoOriginal.toLowerCase();
         switch(comando){
@@ -123,6 +131,38 @@ public class controladorComandos {
         }
     }
     
+
+    private String[] separarArgumentos(String entrada) {
+        List<String> argumentos = new ArrayList<>();
+        StringBuilder actual = new StringBuilder();
+        boolean entreComillas = false;
+
+        for (int i = 0; i < entrada.length(); i++) {
+            char caracter = entrada.charAt(i);
+
+            if (caracter == '"') {
+                entreComillas = !entreComillas;
+            } else if (Character.isWhitespace(caracter) && !entreComillas) {
+                if (actual.length() > 0) {
+                    argumentos.add(actual.toString());
+                    actual.setLength(0);
+                }
+            } else {
+                actual.append(caracter);
+            }
+        }
+
+        if (entreComillas) {
+            throw new IllegalArgumentException("Error: faltan comillas de cierre.");
+        }
+
+        if (actual.length() > 0) {
+            argumentos.add(actual.toString());
+        }
+
+        return argumentos.toArray(new String[0]);
+    }
+
     private void mkdir(String[] partes){
         if(partes.length < 2){
             consola.imprimir("Uso: Mkdir <nombre>");

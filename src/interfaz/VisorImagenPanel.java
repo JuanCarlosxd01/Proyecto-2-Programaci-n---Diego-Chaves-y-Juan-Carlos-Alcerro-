@@ -7,6 +7,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,6 +22,7 @@ public class VisorImagenPanel extends JPanel {
     private JLabel lblNombre;
     private JButton btnAnterior;
     private JButton btnSiguiente;
+    private JButton btnImportar;
     private JPanel panelMiniaturas;
     private JPanel panelVisor;
     private JScrollPane scrollMiniaturas;
@@ -26,10 +30,12 @@ public class VisorImagenPanel extends JPanel {
     private int indiceActual;
     private Runnable accionCerrar;
     private int solicitudImagen;
+    private File carpetaActual;
 
     public VisorImagenPanel(File carpeta) {
         imagenes = new ArrayList<>();
         indiceActual = 0;
+        carpetaActual = carpeta;
 
         setLayout(new BorderLayout());
         setBackground(new Color(30, 30, 30));
@@ -67,15 +73,18 @@ public class VisorImagenPanel extends JPanel {
         JPanel panelInferior = new JPanel(new BorderLayout());
         panelInferior.setBackground(new Color(35, 35, 35));
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 8));
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 18, 12));
         panelBotones.setOpaque(false);
 
-        btnAnterior = new JButton("◀ Anterior");
-        btnSiguiente = new JButton("Siguiente ▶");
+        btnAnterior = new JButton("←  Anterior");
+        btnSiguiente = new JButton("Siguiente  →");
+        btnImportar = new JButton("Importar imagen");
 
         estilizarBotonOscuro(btnAnterior);
         estilizarBotonOscuro(btnSiguiente);
+        estilizarBotonOscuro(btnImportar);
 
+        panelBotones.add(btnImportar);
         panelBotones.add(btnAnterior);
         panelBotones.add(btnSiguiente);
 
@@ -96,6 +105,7 @@ public class VisorImagenPanel extends JPanel {
         panelInferior.add(scrollMiniaturas, BorderLayout.CENTER);
         add(panelInferior, BorderLayout.SOUTH);
 
+        btnImportar.addActionListener(e -> importarImagen());
         btnAnterior.addActionListener(e -> anterior());
         btnSiguiente.addActionListener(e -> siguiente());
 
@@ -107,6 +117,29 @@ public class VisorImagenPanel extends JPanel {
                 }
             }
         });
+    }
+
+
+    private void importarImagen() {
+        if (carpetaActual == null) return;
+        JFileChooser selector = new JFileChooser();
+        selector.setDialogTitle("Importar imagen");
+        selector.setFileFilter(new FileNameExtensionFilter("Imágenes", "png", "jpg", "jpeg", "gif", "bmp"));
+        if (selector.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+
+        File origen = selector.getSelectedFile();
+        File destino = new File(carpetaActual, origen.getName());
+
+        try {
+            Files.copy(origen.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            cargarImagenes(carpetaActual);
+            crearMiniaturas();
+            indiceActual = Math.max(0, imagenes.indexOf(destino));
+            if (!imagenes.isEmpty()) mostrarImagen();
+            DialogosWindows.showMessageDialog(this, "Imagen importada correctamente.");
+        } catch (IOException e) {
+            DialogosWindows.showMessageDialog(this, "No se pudo importar la imagen: " + e.getMessage(), "Imágenes", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void cargarImagenes(File carpeta) {
@@ -356,8 +389,18 @@ public class VisorImagenPanel extends JPanel {
         boton.setBorderPainted(true);
         boton.setBackground(new Color(55, 55, 55));
         boton.setForeground(Color.WHITE);
-        boton.setBorder(BorderFactory.createLineBorder(new Color(85, 85, 85)));
+        boton.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(95, 95, 95)), BorderFactory.createEmptyBorder(9, 18, 9, 18)));
+        boton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        Color normal = boton.getBackground();
+        boton.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) {
+                if (boton.isEnabled()) boton.setBackground(new Color(82, 82, 82));
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                boton.setBackground(normal);
+            }
+        });
     }
 
 }

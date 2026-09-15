@@ -3,6 +3,7 @@ package interfaz;
 import java.awt.*;
 import javax.swing.*;
 import modelo.UsuarioSistema;
+import modelo.TipoUsuario;
 import sistema.GestorUsuarios;
 import sistema.Sesion;
 
@@ -13,6 +14,7 @@ public class AdministrarUsuariosPanel extends JPanel {
     private JPasswordField txtConfirmarContrasena;
 
     private JCheckBox chkMostrarContrasena;
+    private JComboBox<String> cmbTipoUsuario;
 
     private JButton btnCrearUsuario;
     private JButton btnEliminarUsuario;
@@ -49,6 +51,7 @@ public class AdministrarUsuariosPanel extends JPanel {
         txtConfirmarContrasena = new JPasswordField();
 
         chkMostrarContrasena = new JCheckBox("Mostrar contraseñas");
+        cmbTipoUsuario = new JComboBox<>(new String[]{"Estándar", "Administrador"});
 
         btnCrearUsuario = new JButton("Crear usuario");
 
@@ -72,6 +75,10 @@ public class AdministrarUsuariosPanel extends JPanel {
         formulario.add(Box.createVerticalStrut(5));
 
         formulario.add(chkMostrarContrasena);
+
+        formulario.add(Box.createVerticalStrut(10));
+        formulario.add(new JLabel("Tipo de usuario:"));
+        formulario.add(cmbTipoUsuario);
 
         formulario.add(Box.createVerticalStrut(10));
 
@@ -216,7 +223,8 @@ public class AdministrarUsuariosPanel extends JPanel {
             return;
         }
 
-        boolean creado = gestorUsuarios.crearUsuario(username, contrasena);
+        TipoUsuario tipo = cmbTipoUsuario.getSelectedItem().equals("Administrador") ? TipoUsuario.ADMINISTRADOR : TipoUsuario.ESTANDAR;
+        boolean creado = gestorUsuarios.crearUsuario(username, contrasena, tipo);
 
         if (creado) {
             DialogosWindows.showMessageDialog(
@@ -227,6 +235,7 @@ public class AdministrarUsuariosPanel extends JPanel {
             txtUsuario.setText("");
             txtContrasena.setText("");
             txtConfirmarContrasena.setText("");
+            cmbTipoUsuario.setSelectedIndex(0);
 
             actualizarLista();
 
@@ -274,16 +283,7 @@ public class AdministrarUsuariosPanel extends JPanel {
             return;
         }
 
-        int opcion = JOptionPane.showConfirmDialog(
-                this,
-                "¿Está seguro de eliminar al usuario "
-                + seleccionado.getUsername()
-                + "?\n\n"
-                + "También se eliminará su carpeta de archivos.",
-                "Eliminar usuario",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
-        );
+        int opcion = DialogosWindows.showConfirmDialog(this, "¿Está seguro de eliminar al usuario " + seleccionado.getUsername() + "?\n\nTambién se eliminará su carpeta de archivos.", "Eliminar usuario", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (opcion != JOptionPane.YES_OPTION) {
             return;

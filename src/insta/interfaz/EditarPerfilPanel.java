@@ -55,7 +55,8 @@ public class EditarPerfilPanel extends JPanel implements Tematizable {
         JLabel titulo = new JLabel("Editar perfil");
         titulo.setFont(new Font("Arial", Font.BOLD, 25));
 
-        panelEncabezado.add(titulo, BorderLayout.WEST);
+        titulo.setHorizontalAlignment(SwingConstants.CENTER);
+        panelEncabezado.add(titulo, BorderLayout.CENTER);
 
         add(panelEncabezado, BorderLayout.NORTH);
     }
@@ -84,9 +85,12 @@ public class EditarPerfilPanel extends JPanel implements Tematizable {
 
         cmbGenero = new JComboBox<>(new String[]{"M", "F"});
         cmbGenero.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        cmbGenero.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         spnEdad = new JSpinner(new SpinnerNumberModel(18, 1, 120, 1));
         spnEdad.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        spnEdad.setAlignmentX(Component.CENTER_ALIGNMENT);
+        if (spnEdad.getEditor() instanceof JSpinner.DefaultEditor editor) editor.getTextField().setHorizontalAlignment(SwingConstants.CENTER);
 
         txtContrasenaActual = crearPassword();
         txtContrasenaNueva = crearPassword();
@@ -207,18 +211,8 @@ public class EditarPerfilPanel extends JPanel implements Tematizable {
     }
 
     private void cambiarFoto() {
-        JFileChooser selector = new JFileChooser();
-
-        selector.setDialogTitle("Seleccionar foto de perfil");
-        selector.setFileFilter(new FileNameExtensionFilter("Imágenes", "png", "jpg", "jpeg"));
-
-        int opcion = selector.showOpenDialog(this);
-
-        if (opcion != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File archivo = selector.getSelectedFile();
+        File archivo = SelectorArchivosZ.seleccionarImagen(this, "Seleccionar foto de perfil");
+        if (archivo == null) return;
 
         try {
             byte[] bytes = Files.readAllBytes(archivo.toPath());
@@ -368,20 +362,23 @@ public class EditarPerfilPanel extends JPanel implements Tematizable {
     private JTextField crearTexto() {
         JTextField campo = new JTextField();
         campo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        campo.setHorizontalAlignment(SwingConstants.CENTER);
         return campo;
     }
 
     private JPasswordField crearPassword() {
         JPasswordField campo = new JPasswordField();
         campo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        campo.setHorizontalAlignment(SwingConstants.CENTER);
         return campo;
     }
 
     private void agregarCampo(String texto, JComponent componente) {
-        JLabel label = new JLabel(texto);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel label = new JLabel(texto, SwingConstants.CENTER);
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
 
-        componente.setAlignmentX(Component.LEFT_ALIGNMENT);
+        componente.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         panelFormulario.add(label);
         panelFormulario.add(Box.createVerticalStrut(5));

@@ -9,12 +9,14 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import red.Cliente;
 import red.Respuesta;
+import java.util.function.Consumer;
 
 public class TimelinePanel extends JPanel implements Tematizable {
 
     private JPanel panelHistorias;
     private JPanel panelPublicaciones;
     private final Cliente cliente;
+    private Consumer<String> accionAbrirPerfil;
 
     public TimelinePanel(Cliente cliente) {
         this.cliente = cliente;
@@ -40,6 +42,14 @@ public class TimelinePanel extends JPanel implements Tematizable {
         add(scroll, BorderLayout.NORTH);
     }
 
+    public void setAccionAbrirPerfil(Consumer<String> accionAbrirPerfil) {
+        this.accionAbrirPerfil = accionAbrirPerfil;
+    }
+
+    public void actualizarHistorias() {
+        cargarHistorias();
+    }
+
     private void cargarHistorias() {
         panelHistorias.removeAll();
 
@@ -54,7 +64,7 @@ public class TimelinePanel extends JPanel implements Tematizable {
 
         if (usuarioActual == null) {
             panelHistorias.removeAll();
-            agregarHistoria("Tu historia", "");
+            agregarHistoria("Tu historia", "", "");
             panelHistorias.revalidate();
             panelHistorias.repaint();
             return;
@@ -71,7 +81,7 @@ public class TimelinePanel extends JPanel implements Tematizable {
             protected void done() {
                 panelHistorias.removeAll();
 
-                agregarHistoria("Tu historia", usuarioActual.getRutaFotoPerfil());
+                agregarHistoria("Tu historia", usuarioActual.getRutaFotoPerfil(), usuarioActual.getUsername());
 
                 try {
                     Respuesta respuesta = get();
@@ -81,7 +91,7 @@ public class TimelinePanel extends JPanel implements Tematizable {
 
                         for (Respuesta.DatosUsuario usuario : seguidos) {
                             if (usuario.estaActiva()) {
-                                agregarHistoria(usuario.getUsername(), usuario.getRutaFotoPerfil());
+                                agregarHistoria(usuario.getUsername(), usuario.getRutaFotoPerfil(), usuario.getUsername());
                             }
                         }
                     }
@@ -97,7 +107,7 @@ public class TimelinePanel extends JPanel implements Tematizable {
         trabajador.execute();
     }
 
-    private void agregarHistoria(String username, String rutaFotoPerfil) {
+    private void agregarHistoria(String username, String rutaFotoPerfil, String usuarioObjetivo) {
         JPanel historia = new JPanel();
         historia.setLayout(new BoxLayout(historia, BoxLayout.Y_AXIS));
         historia.setOpaque(false);
@@ -119,11 +129,80 @@ public class TimelinePanel extends JPanel implements Tematizable {
         historia.add(Box.createVerticalStrut(4));
         historia.add(nombre);
 
+        historia.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        historia.setToolTipText("Ver historia de " + username);
+        historia.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (usuarioObjetivo != null && !usuarioObjetivo.isBlank()) abrirHistoria(usuarioObjetivo);
+            }
+        });
+
         panelHistorias.add(historia);
 
         if (rutaFotoPerfil != null && !rutaFotoPerfil.isBlank()) {
             cargarImagen(rutaFotoPerfil, foto, 59, 59);
         }
+    }
+
+
+    private void abrirHistoria(String username) {
+        JPanel contenido = new JPanel(new BorderLayout());
+        contenido.setBackground(TemaInsta.FONDO);
+        cargarHistoriaEnPanel(username, contenido);
+        PanelSuperpuestoInsta.mostrar(this, "Historia de @" + username, contenido, new Dimension(690, 700));
+    }
+
+    private void cargarHistoriaEnPanel(String username, JPanel contenido) {
+        contenido.removeAll();
+        JLabel cargando = new JLabel("Cargando historia...", SwingConstants.CENTER);
+        cargando.setForeground(TemaInsta.TEXTO);
+        contenido.add(cargando, BorderLayout.CENTER);
+        contenido.revalidate();
+        contenido.repaint();
+
+        SwingWorker<Respuesta, Void> trabajador = new SwingWorker<>() {
+            @Override
+            protected Respuesta doInBackground() throws Exception {
+                return cliente.publicaciones(username, 0);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Respuesta respuesta = get();
+                    contenido.removeAll();
+                    if (!respuesta.esExitosa() || respuesta.getPublicaciones() == null || respuesta.getPublicaciones().isEmpty()) {
+                        JLabel vacia = new JLabel("@" + username + " todavía no tiene una historia disponible.", SwingConstants.CENTER);
+                        vacia.setForeground(TemaInsta.TEXTO);
+                        contenido.add(vacia, BorderLayout.CENTER);
+                    } else {
+                        Publicacion publicacion = respuesta.getPublicaciones().obtener(0);
+                        Runnable actualizarHistoria = () -> cargarTimeline();
+                        TarjetaPublicacionPanel tarjeta = new TarjetaPublicacionPanel(cliente, publicacion, actualizarHistoria, accionAbrirPerfil);
+                        JPanel centrado = new JPanel(new GridBagLayout());
+                        centrado.setBackground(TemaInsta.FONDO);
+                        GridBagConstraints gbc = new GridBagConstraints();
+                        gbc.gridx = 0;
+                        gbc.gridy = 0;
+                        gbc.anchor = GridBagConstraints.CENTER;
+                        gbc.insets = new Insets(8, 8, 8, 8);
+                        centrado.add(tarjeta, gbc);
+                        contenido.add(centrado, BorderLayout.CENTER);
+                    }
+                    contenido.revalidate();
+                    contenido.repaint();
+                } catch (Exception e) {
+                    contenido.removeAll();
+                    JLabel error = new JLabel("No se pudo cargar la historia.", SwingConstants.CENTER);
+                    error.setForeground(TemaInsta.TEXTO);
+                    contenido.add(error, BorderLayout.CENTER);
+                    contenido.revalidate();
+                    contenido.repaint();
+                }
+            }
+        };
+        trabajador.execute();
     }
 
     private void crearFeed() {
@@ -189,8 +268,12 @@ public class TimelinePanel extends JPanel implements Tematizable {
     }
 
     private void agregarPublicacion(Publicacion publicacion) {
-        TarjetaPublicacionPanel tarjeta = new TarjetaPublicacionPanel(cliente, publicacion, this::cargarTimeline);
-        panelPublicaciones.add(tarjeta);
+        TarjetaPublicacionPanel tarjeta = new TarjetaPublicacionPanel(cliente, publicacion, this::cargarTimeline, accionAbrirPerfil);
+        JPanel centrado = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        centrado.setOpaque(false);
+        centrado.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centrado.add(tarjeta);
+        panelPublicaciones.add(centrado);
         panelPublicaciones.add(Box.createVerticalStrut(25));
     }
 

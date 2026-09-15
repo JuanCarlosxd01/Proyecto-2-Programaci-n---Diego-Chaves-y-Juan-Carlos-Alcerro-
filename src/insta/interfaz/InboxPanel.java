@@ -35,6 +35,7 @@ public class InboxPanel extends JPanel implements Tematizable {
     private JList<String> listaConversaciones;
 
     private JLabel lblUsuarioChat;
+    private JLabel lblConversaciones;
 
     private JTextField txtMensaje;
 
@@ -74,25 +75,40 @@ public class InboxPanel extends JPanel implements Tematizable {
         panelIzquierdo = new JPanel(new BorderLayout());
         panelIzquierdo.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JPanel encabezadoIzquierdo = new JPanel(new BorderLayout());
+        JPanel encabezadoIzquierdo = new JPanel();
+        encabezadoIzquierdo.setLayout(new BoxLayout(encabezadoIzquierdo, BoxLayout.Y_AXIS));
+        encabezadoIzquierdo.setOpaque(false);
 
-        JLabel lblConversaciones = new JLabel("Mensajes");
+        lblConversaciones = new JLabel("Mensajes");
         lblConversaciones.setFont(new Font("Arial", Font.BOLD, 22));
+        lblConversaciones.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblConversaciones.setHorizontalAlignment(SwingConstants.CENTER);
 
-        JPanel botones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
         botones.setOpaque(false);
+        botones.setAlignmentX(Component.CENTER_ALIGNMENT);
+        botones.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
 
         btnNuevoChat = new JButton("+");
-        btnActualizar = new JButton("↻");
-        btnImportarSticker = new JButton("Sticker+");
+        btnActualizar = new JButton("Act.");
+        btnImportarSticker = new JButton("+ Sticker");
+        btnImportarSticker.setPreferredSize(new Dimension(82, 30));
+        btnNuevoChat.setPreferredSize(new Dimension(42, 30));
+        btnActualizar.setPreferredSize(new Dimension(50, 30));
+        btnImportarSticker.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        btnNuevoChat.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnActualizar.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnImportarSticker.setToolTipText("Importar sticker PNG/JPG");
+        btnNuevoChat.setToolTipText("Nuevo chat");
+        btnActualizar.setToolTipText("Actualizar conversaciones");
 
         botones.add(btnImportarSticker);
         botones.add(btnNuevoChat);
         botones.add(btnActualizar);
 
-        encabezadoIzquierdo.add(lblConversaciones, BorderLayout.WEST);
-        encabezadoIzquierdo.add(botones, BorderLayout.EAST);
+        encabezadoIzquierdo.add(lblConversaciones);
+        encabezadoIzquierdo.add(Box.createVerticalStrut(10));
+        encabezadoIzquierdo.add(botones);
 
         modeloConversaciones = new DefaultListModel<>();
 
@@ -191,6 +207,26 @@ public class InboxPanel extends JPanel implements Tematizable {
         btnEliminar.addActionListener(e -> eliminarConversacion());
         btnBuscarChat.addActionListener(e -> buscarChat());
         txtBuscarChat.addActionListener(e -> buscarChat());
+        instalarHover(btnImportarSticker);
+        instalarHover(btnNuevoChat);
+        instalarHover(btnActualizar);
+        instalarHover(btnBuscarChat);
+        instalarHover(btnSticker);
+        instalarHover(btnEnviar);
+    }
+
+    private void instalarHover(JButton boton) {
+        boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        boton.addMouseListener(new java.awt.event.MouseAdapter() {
+            private Color normal;
+            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+                normal = boton.getBackground();
+                if (boton.isEnabled()) boton.setBackground(TemaInsta.oscuro ? new Color(78, 78, 78) : new Color(220, 220, 220));
+            }
+            @Override public void mouseExited(java.awt.event.MouseEvent e) {
+                if (normal != null) boton.setBackground(normal);
+            }
+        });
     }
 
     public void setUsuarioActual(String usuarioActual) {
@@ -671,11 +707,20 @@ public class InboxPanel extends JPanel implements Tematizable {
     }
 
     private void importarSticker() {
-        JFileChooser selector = new JFileChooser();
-        selector.setDialogTitle("Importar sticker");
-        selector.setFileFilter(new FileNameExtensionFilter("Sticker PNG o JPG", "png", "jpg"));
-        if (selector.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
-        File archivo = selector.getSelectedFile();
+        File archivo = SelectorArchivosZ.seleccionarSticker(this, "Importar sticker");
+        if (archivo == null) return;
+        ImageIcon original = new ImageIcon(archivo.getAbsolutePath());
+        ImageIcon previa = original;
+        if (original.getIconWidth() > 0 && original.getIconHeight() > 0) {
+            double escala = Math.min(140.0 / original.getIconWidth(), 140.0 / original.getIconHeight());
+            Image imagen = original.getImage().getScaledInstance(Math.max(1, (int)(original.getIconWidth() * escala)), Math.max(1, (int)(original.getIconHeight() * escala)), Image.SCALE_SMOOTH);
+            previa = new ImageIcon(imagen);
+        }
+        JLabel vista = new JLabel("<html><center>¿Deseas añadir este sticker?<br><br></center></html>", previa, SwingConstants.CENTER);
+        vista.setHorizontalTextPosition(SwingConstants.CENTER);
+        vista.setVerticalTextPosition(SwingConstants.TOP);
+        int confirmar = DialogosWindows.showConfirmDialog(this, vista, "Previsualizar sticker", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirmar != JOptionPane.OK_OPTION) return;
         String nombre = DialogosWindows.showInputDialog(this, "Nombre del sticker:", quitarExtension(archivo.getName()));
         if (nombre == null || nombre.trim().isEmpty()) return;
 
@@ -872,6 +917,7 @@ public class InboxPanel extends JPanel implements Tematizable {
         listaConversaciones.setSelectionForeground(TemaInsta.TEXTO);
 
         lblUsuarioChat.setForeground(TemaInsta.TEXTO);
+        lblConversaciones.setForeground(TemaInsta.TEXTO);
 
         txtMensaje.setBackground(TemaInsta.INPUT);
         txtMensaje.setForeground(TemaInsta.TEXTO);

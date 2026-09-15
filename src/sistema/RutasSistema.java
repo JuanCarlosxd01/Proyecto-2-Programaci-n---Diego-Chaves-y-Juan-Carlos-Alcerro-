@@ -124,7 +124,7 @@ public final class RutasSistema {
         UsuarioSistema usuario = Sesion.getUsuarioActual();
 
         if (usuario == null) {
-            return getRaizSistema();
+            return null;
         }
 
         if (Sesion.esAdministrador()) {

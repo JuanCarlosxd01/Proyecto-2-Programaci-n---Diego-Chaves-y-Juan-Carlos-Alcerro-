@@ -4,6 +4,10 @@ import hilos.HiloReproductor;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.util.Arrays;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicButtonUI;
@@ -26,6 +30,7 @@ public class ReproductorPanel extends JPanel {
     private JButton btnPause;
     private JButton btnStop;
     private JButton btnActualizar;
+    private JButton btnImportar;
     private JSlider progreso;
     private JLabel lblTiempoActual;
     private JLabel lblDuracion;
@@ -65,11 +70,19 @@ public class ReproductorPanel extends JPanel {
         titulo.setForeground(TEXTO);
 
         btnActualizar = new JButton("Actualizar biblioteca");
+        btnImportar = new JButton("Importar música");
         estilizarBotonOscuro(btnActualizar, PANEL_2, TEXTO);
+        estilizarBotonOscuro(btnImportar, PANEL_2, TEXTO);
         btnActualizar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(75, 75, 75)), BorderFactory.createEmptyBorder(9, 14, 9, 14)));
+        btnImportar.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(75, 75, 75)), BorderFactory.createEmptyBorder(9, 14, 9, 14)));
+
+        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        acciones.setOpaque(false);
+        acciones.add(btnImportar);
+        acciones.add(btnActualizar);
 
         header.add(titulo, BorderLayout.WEST);
-        header.add(btnActualizar, BorderLayout.EAST);
+        header.add(acciones, BorderLayout.EAST);
         add(header, BorderLayout.NORTH);
     }
 
@@ -257,6 +270,7 @@ public class ReproductorPanel extends JPanel {
             progreso.setValue(0);
             if (indiceActual >= 0 && indiceActual < canciones.length) mostrarInformacionCancion(canciones[indiceActual]);
         });
+        btnImportar.addActionListener(e -> importarMusica());
         btnActualizar.addActionListener(e -> {
             reproductor.cerrar();
             limpiarInformacionCancion();
@@ -279,6 +293,31 @@ public class ReproductorPanel extends JPanel {
                 moviendoSlider = false;
             }
         });
+    }
+
+
+    private void importarMusica() {
+        File destino = RutasSistema.getMusicaUsuarioActual();
+        if (destino == null) {
+            DialogosWindows.showMessageDialog(this, "No hay una sesión iniciada.", "Música", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser selector = new JFileChooser();
+        selector.setDialogTitle("Importar música a Z:\\Música");
+        selector.setFileFilter(new FileNameExtensionFilter("Audio compatible", "mp3", "wav", "au", "aiff", "aif"));
+        if (selector.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
+
+        File origen = selector.getSelectedFile();
+        File archivoDestino = new File(destino, origen.getName());
+
+        try {
+            Files.copy(origen.toPath(), archivoDestino.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            cargarCarpetaMusica();
+            DialogosWindows.showMessageDialog(this, "Música importada correctamente a " + destino.getPath() + ".");
+        } catch (IOException e) {
+            DialogosWindows.showMessageDialog(this, "No se pudo importar la música: " + e.getMessage(), "Música", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void reproducirSeleccionada() {
