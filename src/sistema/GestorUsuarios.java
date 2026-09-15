@@ -104,14 +104,11 @@ public class GestorUsuarios {
         }
 
         UsuarioSistema nuevo = new UsuarioSistema(username, contrasena, tipo);
-
         usuarios.add(nuevo);
-
         crearCarpetasUsuario(nuevo);
 
         if (!gestorBinario.guardarUsuarios(usuarios)) {
             usuarios.remove(nuevo);
-
             return false;
         }
 
@@ -124,8 +121,9 @@ public class GestorUsuarios {
         }
 
         UsuarioSistema usuario = buscarUsuario(username);
+        UsuarioSistema actual = Sesion.getUsuarioActual();
 
-        if (usuario == null) {
+        if (usuario == null || actual == null) {
             return false;
         }
 
@@ -133,11 +131,16 @@ public class GestorUsuarios {
             return false;
         }
 
-        UsuarioSistema actual = Sesion.getUsuarioActual();
-        boolean esPrincipal = actual != null && actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
-        boolean esPropiaCuenta = actual != null && actual.getUsername().equalsIgnoreCase(usuario.getUsername());
+        boolean esPrincipal = actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
+        boolean esAdministrador = actual.esAdministrador();
+        boolean esPropiaCuenta = actual.getUsername().equalsIgnoreCase(usuario.getUsername());
+        boolean objetivoEsAdministrador = usuario.esAdministrador();
 
-        if (!esPrincipal && !esPropiaCuenta) {
+        if (!esPrincipal && objetivoEsAdministrador && !esPropiaCuenta) {
+            return false;
+        }
+
+        if (!esAdministrador && !esPropiaCuenta) {
             return false;
         }
 
@@ -145,12 +148,10 @@ public class GestorUsuarios {
 
         if (!gestorBinario.guardarUsuarios(usuarios)) {
             usuarios.add(usuario);
-
             return false;
         }
 
-       File carpetaUsuario = new File("Z", usuario.getUsername());
-
+        File carpetaUsuario = new File("Z", usuario.getUsername());
         eliminarRecursivamente(carpetaUsuario);
 
         return true;
