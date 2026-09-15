@@ -208,9 +208,15 @@ public class GestorUsuarios {
         }
 
         boolean esPrincipal = actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
+        boolean esAdministrador = actual.esAdministrador();
         boolean esPropiaCuenta = actual.getUsername().equalsIgnoreCase(usuario.getUsername());
+        boolean objetivoEsAdministrador = usuario.esAdministrador();
 
-        if (!esPrincipal && !esPropiaCuenta) {
+        if (!esPrincipal && objetivoEsAdministrador && !esPropiaCuenta) {
+            return false;
+        }
+
+        if (!esAdministrador && !esPropiaCuenta) {
             return false;
         }
 
@@ -237,7 +243,15 @@ public class GestorUsuarios {
             return false;
         }
 
-        if (!actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO)) {
+        boolean esPrincipal = actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
+        boolean esAdministrador = actual.esAdministrador();
+        boolean objetivoEsAdministrador = usuario.esAdministrador();
+
+        if (!esAdministrador) {
+            return false;
+        }
+
+        if (!esPrincipal && objetivoEsAdministrador) {
             return false;
         }
 
@@ -265,9 +279,15 @@ public class GestorUsuarios {
         }
 
         boolean esPrincipal = actual.getUsername().equalsIgnoreCase(ConfiguracionSistema.ADMIN_USUARIO);
+        boolean esAdministrador = actual.esAdministrador();
         boolean esPropiaCuenta = actual.getUsername().equalsIgnoreCase(usuario.getUsername());
+        boolean objetivoEsAdministrador = usuario.esAdministrador();
 
-        if (!esPrincipal && !esPropiaCuenta) {
+        if (!esPrincipal && objetivoEsAdministrador && !esPropiaCuenta) {
+            return false;
+        }
+
+        if (!esAdministrador && !esPropiaCuenta) {
             return false;
         }
 

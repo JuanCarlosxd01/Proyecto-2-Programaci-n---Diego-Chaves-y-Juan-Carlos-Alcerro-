@@ -192,17 +192,36 @@ public class AdministrarUsuariosPanel extends JPanel {
 
     private void activarUsuario() {
         UsuarioSistema seleccionado = obtenerSeleccionado();
-        if (seleccionado == null) return;
-        if (!esAdminPrincipal(Sesion.getUsuarioActual())) {
-            DialogosWindows.showMessageDialog(this, "Solo el administrador principal puede activar cuentas.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+
+        if (seleccionado == null) {
             return;
         }
+
+        UsuarioSistema actual = Sesion.getUsuarioActual();
+
+        if (actual == null || !actual.esAdministrador()) {
+            DialogosWindows.showMessageDialog(this, "Solo un administrador puede activar cuentas.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        boolean principal = esAdminPrincipal(actual);
+
+        if (!principal && seleccionado.esAdministrador()) {
+            DialogosWindows.showMessageDialog(this, "Solo el administrador principal puede activar la cuenta de otro administrador.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         if (seleccionado.estaActivo()) {
             DialogosWindows.showMessageDialog(this, "La cuenta ya está activa.");
             return;
         }
+
         int opcion = DialogosWindows.showConfirmDialog(this, "¿Desea activar la cuenta de " + seleccionado.getUsername() + "?", "Activar cuenta", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (opcion != JOptionPane.YES_OPTION) return;
+
+        if (opcion != JOptionPane.YES_OPTION) {
+            return;
+        }
+
         if (gestorUsuarios.activarUsuario(seleccionado.getUsername())) {
             DialogosWindows.showMessageDialog(this, "Cuenta activada correctamente.");
             actualizarLista();
@@ -213,21 +232,48 @@ public class AdministrarUsuariosPanel extends JPanel {
 
     private void desactivarUsuario() {
         UsuarioSistema seleccionado = obtenerSeleccionado();
-        if (seleccionado == null) return;
-        if (!esAdminPrincipal(Sesion.getUsuarioActual())) {
-            DialogosWindows.showMessageDialog(this, "Solo el administrador principal puede desactivar otras cuentas.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+
+        if (seleccionado == null) {
             return;
         }
+
+        UsuarioSistema actual = Sesion.getUsuarioActual();
+
+        if (actual == null) {
+            return;
+        }
+
         if (esAdminPrincipal(seleccionado)) {
             DialogosWindows.showMessageDialog(this, "El administrador principal no puede desactivarse.", "Acción no permitida", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        boolean principal = esAdminPrincipal(actual);
+        boolean administrador = actual.esAdministrador();
+        boolean propia = actual.getUsername().equalsIgnoreCase(seleccionado.getUsername());
+        boolean seleccionadoEsAdministrador = seleccionado.esAdministrador();
+
+        if (!principal && seleccionadoEsAdministrador && !propia) {
+            DialogosWindows.showMessageDialog(this, "Solo el administrador principal puede desactivar a otro administrador.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!administrador && !propia) {
+            DialogosWindows.showMessageDialog(this, "Solo puede desactivar su propia cuenta.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         if (!seleccionado.estaActivo()) {
             DialogosWindows.showMessageDialog(this, "La cuenta ya está desactivada.");
             return;
         }
+
         int opcion = DialogosWindows.showConfirmDialog(this, "¿Está seguro de desactivar la cuenta de " + seleccionado.getUsername() + "?\n\nNo podrá iniciar sesión hasta que vuelva a activarse.", "Desactivar cuenta", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (opcion != JOptionPane.YES_OPTION) return;
+
+        if (opcion != JOptionPane.YES_OPTION) {
+            return;
+        }
+
         if (gestorUsuarios.desactivarUsuario(seleccionado.getUsername())) {
             DialogosWindows.showMessageDialog(this, "Cuenta desactivada correctamente.");
             actualizarLista();
@@ -235,20 +281,46 @@ public class AdministrarUsuariosPanel extends JPanel {
             DialogosWindows.showMessageDialog(this, "No se pudo desactivar la cuenta.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
+    
     private void eliminarUsuario() {
         UsuarioSistema seleccionado = obtenerSeleccionado();
-        if (seleccionado == null) return;
-        if (!esAdminPrincipal(Sesion.getUsuarioActual())) {
-            DialogosWindows.showMessageDialog(this, "Solo el administrador principal puede eliminar otras cuentas desde este panel.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+
+        if (seleccionado == null) {
             return;
         }
+
+        UsuarioSistema actual = Sesion.getUsuarioActual();
+
+        if (actual == null) {
+            return;
+        }
+
         if (esAdminPrincipal(seleccionado)) {
-            DialogosWindows.showMessageDialog(this, "El usuario admin es el administrador principal y no puede eliminarse.", "Acción no permitida", JOptionPane.WARNING_MESSAGE);
+            DialogosWindows.showMessageDialog(this, "El administrador principal no puede eliminarse.", "Acción no permitida", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        boolean principal = esAdminPrincipal(actual);
+        boolean administrador = actual.esAdministrador();
+        boolean propia = actual.getUsername().equalsIgnoreCase(seleccionado.getUsername());
+        boolean seleccionadoEsAdministrador = seleccionado.esAdministrador();
+
+        if (!principal && seleccionadoEsAdministrador && !propia) {
+            DialogosWindows.showMessageDialog(this, "Solo el administrador principal puede eliminar a otro administrador.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (!administrador && !propia) {
+            DialogosWindows.showMessageDialog(this, "Solo puede eliminar su propia cuenta.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         int opcion = DialogosWindows.showConfirmDialog(this, "¿Está seguro de eliminar al usuario " + seleccionado.getUsername() + "?\n\nTambién se eliminará su carpeta de archivos.", "Eliminar usuario", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (opcion != JOptionPane.YES_OPTION) return;
+
+        if (opcion != JOptionPane.YES_OPTION) {
+            return;
+        }
+
         if (gestorUsuarios.eliminarUsuario(seleccionado.getUsername())) {
             DialogosWindows.showMessageDialog(this, "Usuario eliminado correctamente.");
             actualizarLista();
@@ -291,12 +363,26 @@ public class AdministrarUsuariosPanel extends JPanel {
     private void actualizarBotones() {
         UsuarioSistema seleccionado = listaUsuarios == null ? null : listaUsuarios.getSelectedValue();
         UsuarioSistema actual = Sesion.getUsuarioActual();
+
+        if (seleccionado == null || actual == null) {
+            btnCambiarContrasena.setEnabled(false);
+            btnActivarUsuario.setEnabled(false);
+            btnDesactivarUsuario.setEnabled(false);
+            btnEliminarUsuario.setEnabled(false);
+            return;
+        }
+
         boolean principal = esAdminPrincipal(actual);
-        boolean propia = seleccionado != null && actual != null && seleccionado.getUsername().equalsIgnoreCase(actual.getUsername());
+        boolean administrador = actual.esAdministrador();
+        boolean propia = seleccionado.getUsername().equalsIgnoreCase(actual.getUsername());
         boolean seleccionadoPrincipal = esAdminPrincipal(seleccionado);
-        btnCambiarContrasena.setEnabled(seleccionado != null && (principal || propia));
-        btnActivarUsuario.setEnabled(principal && seleccionado != null && !seleccionado.estaActivo());
-        btnDesactivarUsuario.setEnabled(principal && seleccionado != null && seleccionado.estaActivo() && !seleccionadoPrincipal);
-        btnEliminarUsuario.setEnabled(principal && seleccionado != null && !seleccionadoPrincipal);
+        boolean seleccionadoAdministrador = seleccionado.esAdministrador();
+
+        boolean puedeAdministrarSeleccionado = principal || propia || (administrador && !seleccionadoAdministrador);
+
+        btnCambiarContrasena.setEnabled(puedeAdministrarSeleccionado);
+        btnActivarUsuario.setEnabled(administrador && !seleccionado.estaActivo() && (principal || !seleccionadoAdministrador));
+        btnDesactivarUsuario.setEnabled(seleccionado.estaActivo() && !seleccionadoPrincipal && puedeAdministrarSeleccionado);
+        btnEliminarUsuario.setEnabled(!seleccionadoPrincipal && puedeAdministrarSeleccionado);
     }
 }
