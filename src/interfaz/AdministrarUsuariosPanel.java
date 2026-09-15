@@ -121,25 +121,16 @@ public class AdministrarUsuariosPanel extends JPanel {
         listaUsuarios.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         listaUsuarios.setCellRenderer(new DefaultListCellRenderer() {
-
             @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list,
-                    Object value,
-                    int index,
-                    boolean isSelected,
-                    boolean cellHasFocus
-            ) {
-                JLabel label = (JLabel) super.getListCellRendererComponent(
-                        list,
-                        value,
-                        index,
-                        isSelected,
-                        cellHasFocus
-                );
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 
-                if (value instanceof UsuarioSistema usuario) {
-                    label.setText(usuario.getUsername() + " - " + usuario.getTipo());
+                if(value instanceof UsuarioSistema usuario) {
+                    if(usuario.getUsername().equalsIgnoreCase("admin")) {
+                        label.setText(usuario.getUsername() + " - ADMIN PRINCIPAL");
+                    } else {
+                        label.setText(usuario.getUsername() + " - " + usuario.getTipo());
+                    }
                 }
 
                 return label;
@@ -162,75 +153,45 @@ public class AdministrarUsuariosPanel extends JPanel {
     }
 
     private void crearUsuario() {
-        if (!Sesion.esAdministrador()) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "Solo el administrador puede crear usuarios.",
-                    "Acceso denegado",
-                    JOptionPane.ERROR_MESSAGE
-            );
-
+        if(!Sesion.esAdministrador()) {
+            DialogosWindows.showMessageDialog(this, "Solo el administrador puede crear usuarios.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         String username = txtUsuario.getText().trim();
-
         String contrasena = new String(txtContrasena.getPassword());
-
         String confirmarContrasena = new String(txtConfirmarContrasena.getPassword());
 
-        if (username.isEmpty()) {
+        if(username.isEmpty()) {
             DialogosWindows.showMessageDialog(this, "Ingrese un nombre de usuario.");
-
             return;
         }
 
-        if (contrasena.isEmpty()) {
+        if(contrasena.isEmpty()) {
             DialogosWindows.showMessageDialog(this, "Ingrese una contraseña.");
-
             return;
         }
 
-        if (confirmarContrasena.isEmpty()) {
+        if(confirmarContrasena.isEmpty()) {
             DialogosWindows.showMessageDialog(this, "Confirme la contraseña.");
-
             return;
         }
 
-        if (!contrasena.equals(confirmarContrasena)) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "Las contraseñas no coinciden.",
-                    "Contraseña incorrecta",
-                    JOptionPane.ERROR_MESSAGE
-            );
-
+        if(!contrasena.equals(confirmarContrasena)) {
+            DialogosWindows.showMessageDialog(this, "Las contraseñas no coinciden.", "Contraseña incorrecta", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        if (!contrasenaValida(contrasena)) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "La contraseña debe tener:\n\n"
-                    + "- Mínimo 8 caracteres\n"
-                    + "- Al menos una letra mayúscula\n"
-                    + "- Al menos un número\n"
-                    + "- Al menos un símbolo",
-                    "Contraseña no válida",
-                    JOptionPane.WARNING_MESSAGE
-            );
-
+        if(!contrasenaValida(contrasena)) {
+            DialogosWindows.showMessageDialog(this, "La contraseña debe tener:\n\n- Mínimo 8 caracteres\n- Al menos una letra mayúscula\n- Al menos un número\n- Al menos un símbolo", "Contraseña no válida", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         TipoUsuario tipo = cmbTipoUsuario.getSelectedItem().equals("Administrador") ? TipoUsuario.ADMINISTRADOR : TipoUsuario.ESTANDAR;
         boolean creado = gestorUsuarios.crearUsuario(username, contrasena, tipo);
 
-        if (creado) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "Usuario creado correctamente."
-            );
+        if(creado) {
+            DialogosWindows.showMessageDialog(this, "Usuario creado correctamente.");
 
             txtUsuario.setText("");
             txtContrasena.setText("");
@@ -238,76 +199,42 @@ public class AdministrarUsuariosPanel extends JPanel {
             cmbTipoUsuario.setSelectedIndex(0);
 
             actualizarLista();
-
         } else {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "No se pudo crear el usuario. Puede que el nombre ya exista.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            DialogosWindows.showMessageDialog(this, "No se pudo crear el usuario. Puede que el nombre ya exista.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void eliminarUsuario() {
-        if (!Sesion.esAdministrador()) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "Solo el administrador puede eliminar usuarios.",
-                    "Acceso denegado",
-                    JOptionPane.ERROR_MESSAGE
-            );
-
+        if(!Sesion.esAdministrador()) {
+            DialogosWindows.showMessageDialog(this, "Solo el administrador puede eliminar usuarios.", "Acceso denegado", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         UsuarioSistema seleccionado = listaUsuarios.getSelectedValue();
 
-        if (seleccionado == null) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "Seleccione un usuario de la lista."
-            );
-
+        if(seleccionado == null) {
+            DialogosWindows.showMessageDialog(this, "Seleccione un usuario de la lista.");
             return;
         }
 
-        if (seleccionado.esAdministrador()) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "El usuario administrador principal no puede eliminarse.",
-                    "Acción no permitida",
-                    JOptionPane.WARNING_MESSAGE
-            );
-
+        if(seleccionado.getUsername().equalsIgnoreCase("admin")) {
+            DialogosWindows.showMessageDialog(this, "El usuario admin es el administrador principal y no puede eliminarse.", "Acción no permitida", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         int opcion = DialogosWindows.showConfirmDialog(this, "¿Está seguro de eliminar al usuario " + seleccionado.getUsername() + "?\n\nTambién se eliminará su carpeta de archivos.", "Eliminar usuario", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
-        if (opcion != JOptionPane.YES_OPTION) {
+        if(opcion != JOptionPane.YES_OPTION) {
             return;
         }
 
-        boolean eliminado = gestorUsuarios.eliminarUsuario(
-                seleccionado.getUsername()
-        );
+        boolean eliminado = gestorUsuarios.eliminarUsuario(seleccionado.getUsername());
 
-        if (eliminado) {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "Usuario eliminado correctamente."
-            );
-
+        if(eliminado) {
+            DialogosWindows.showMessageDialog(this, "Usuario eliminado correctamente.");
             actualizarLista();
-
         } else {
-            DialogosWindows.showMessageDialog(
-                    this,
-                    "No se pudo eliminar el usuario.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            DialogosWindows.showMessageDialog(this, "No se pudo eliminar el usuario.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -316,10 +243,9 @@ public class AdministrarUsuariosPanel extends JPanel {
     }
 
     private void mostrarOcultarContrasena() {
-        if (chkMostrarContrasena.isSelected()) {
+        if(chkMostrarContrasena.isSelected()) {
             txtContrasena.setEchoChar((char) 0);
             txtConfirmarContrasena.setEchoChar((char) 0);
-
         } else {
             txtContrasena.setEchoChar('•');
             txtConfirmarContrasena.setEchoChar('•');
@@ -329,7 +255,7 @@ public class AdministrarUsuariosPanel extends JPanel {
     private void actualizarLista() {
         modeloUsuarios.clear();
 
-        for (UsuarioSistema usuario : gestorUsuarios.getUsuarios()) {
+        for(UsuarioSistema usuario : gestorUsuarios.getUsuarios()) {
             modeloUsuarios.addElement(usuario);
         }
     }

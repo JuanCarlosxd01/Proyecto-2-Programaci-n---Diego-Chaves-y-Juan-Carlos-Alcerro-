@@ -1,4 +1,3 @@
-
 package interfaz;
 
 import java.awt.*;
@@ -320,7 +319,7 @@ public class LoginPanel extends JPanel {
         lblAviso.setForeground(Color.WHITE);
 
         panelAviso.add(lblAviso, BorderLayout.CENTER);
-}
+    }
 
     private void crearBotonApagado() {
         btnApagar = new JButton("⏻") {
@@ -394,15 +393,17 @@ public class LoginPanel extends JPanel {
 
     private void mostrarAviso(String mensaje) {
         panelAviso.setOpaque(true);
-        panelAviso.setBackground(new Color(125, 35, 35, 215));
+        panelAviso.setBackground(new Color(125, 35, 35));
 
         panelAviso.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(235, 110, 110)),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
 
+        lblAviso.setOpaque(false);
         lblAviso.setText(mensaje);
 
+        panelAviso.revalidate();
         panelAviso.repaint();
     }
 
@@ -449,12 +450,11 @@ public class LoginPanel extends JPanel {
             ocultarAviso();
             Sesion.iniciarSesion(encontrado);
             transicion.show(contenedor, "ESCRITORIO");
-        }
-        else {
+        } else {
             mostrarAviso("Usuario o contraseña incorrectos.");
         }
     }
-    
+
     public void limpiarCampos() {
         txtUsuario.setText("Nombre de usuario");
         txtUsuario.setForeground(Color.GRAY);
